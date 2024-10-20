@@ -540,20 +540,19 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
   // WAO: Pushing free prefetch entries to Sampler (for STLB only)
   if(NAME == "cpu0_STLB")
   {
+    uint64_t vpn_base = (pf_addr >> (LOG2_PAGE_SIZE + 3)) << 3;
     uint64_t vpn = pf_addr >> LOG2_PAGE_SIZE;
-
-    // Assuming a block size of 64B and 64-bit memory locations, last three bits of VPN correspond to offset within block
-    uint64_t offset = vpn & 0x7;
-    uint64_t vpn_base = vpn ^ offset;
-    //std::cout << vpn_base << " " << offset << "\n";
+    // Assuming a block size of 64B and 64-bit memory locations
+    uint64_t offset = vpn - vpn_base;
+    std::cout << "Actual " << vpn << " " << offset << "\n";
 
     // Add all translations in block with appropriate free distances (except the actual VPN)
     // Also query FDT to see if the corresponding free distance is above the threshold to issue a prefetch request
     for(int i = 0; i < 8; i++)
     {
-      if(i != (int) offset)
+      if(i != (int)offset)
       {
-        uint64_t vpn_insert = vpn_base + (i * 8);
+        uint64_t vpn_insert = vpn_base + (i);
         int8_t free_pf_dist_insert = i - (int)offset;
         
         if(STLB_FDT.insert_sampler(free_pf_dist_insert))  // Insert into sampler
@@ -573,15 +572,15 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
           free_pf_packet.pf_metadata = prefetch_metadata;
           free_pf_packet.cpu = cpu;
           free_pf_packet.address = vpn_insert << LOG2_PAGE_SIZE;
-          free_pf_packet.v_address = virtual_prefetch ? pf_packet.address : 0;
+          free_pf_packet.v_address = virtual_prefetch ? (vpn_insert << LOG2_PAGE_SIZE) : 0;
           free_pf_packet.is_translated = !virtual_prefetch;
           free_pf_packet.free_pf_dist = free_pf_dist_insert;
 
           internal_PQ.emplace_back(free_pf_packet, true, !fill_this_level);
           ++sim_stats.pf_issued;
-          std::cout << "Free PF at distance " << (int) free_pf_dist_insert << "\n";
+          std::cout << "Free PF at " << vpn_insert << "\n";
         }
-        //std::cout << vpn_insert << " " << (int)free_pf_dist_insert << "\n";
+        //std::cout << (vpn_insert) << " " << (int)free_pf_dist_insert << "\n";
       }
     }
   }
