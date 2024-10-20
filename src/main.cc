@@ -30,6 +30,15 @@
 #include <CLI/CLI.hpp>
 #include <fmt/core.h>
 
+// WAO: Adding include for sampler header
+#include "sampler.h"
+
+// WAO: Include IOStream for convenience
+#include <iostream>
+
+// WAO: Create STLB sampler
+sampler STLB_sampler = sampler();
+
 namespace champsim
 {
 std::vector<phase_stats> main(environment& env, std::vector<phase_info>& phases, std::vector<tracereader>& traces);
@@ -117,5 +126,8 @@ int main(int argc, char** argv)
     }
   }
 
+  // WAO: Print contents of STLB_sampler
+  std::cout << "Contents of STLB Sampler\n";
+  STLB_sampler.print_contents();
   return 0;
 }

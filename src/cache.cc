@@ -32,6 +32,13 @@
 #include "util/span.h"
 #include <fmt/core.h>
 
+// WAO: Adding include for sampler header
+#include "sampler.h"
+#include <iostream>
+
+// WAO: Use STLB sampler created in main.cc
+extern sampler STLB_sampler;
+
 CACHE::tag_lookup_type::tag_lookup_type(request_type req, bool local_pref, bool skip)
     : address(req.address), v_address(req.v_address), data(req.data), ip(req.ip), instr_id(req.instr_id), pf_metadata(req.pf_metadata), cpu(req.cpu),
       type(req.type), prefetch_from_this(local_pref), skip_fill(skip), is_translated(req.is_translated), instr_depend_on_me(req.instr_depend_on_me)
@@ -485,6 +492,31 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
   internal_PQ.emplace_back(pf_packet, true, !fill_this_level);
   ++sim_stats.pf_issued;
 
+  #ifdef SBFP_ENABLE
+  // WAO: Pushing free prefetch entries to Sampler (for STLB only)
+  if(NAME == "cpu0_STLB")
+  {
+    uint64_t vpn = pf_addr >> LOG2_PAGE_SIZE;
+
+    // Assuming a block size of 64B and 64-bit memory locations, last three bits of VPN correspond to offset within block
+    uint64_t offset = vpn & 0x7;
+    uint64_t vpn_base = vpn ^ offset;
+    //std::cout << vpn_base << " " << offset << "\n";
+
+    // Add all translations in block with appropriate free distances (except the actual VPN)
+    for(int i = 0; i < 8; i++)
+    {
+      if(i != (int) offset)
+      {
+        uint64_t vpn_insert = vpn_base + (i * 8);
+        int8_t free_pf_dist_insert = i - (int)offset;
+        STLB_sampler.add_entry(vpn_insert, free_pf_dist_insert);
+        //std::cout << vpn_insert << " " << (int)free_pf_dist_insert << "\n";
+      }
+    }
+  }
+  #endif
+  
   return true;
 }
 
