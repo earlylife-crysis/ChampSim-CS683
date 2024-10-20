@@ -30,14 +30,16 @@
 #include <CLI/CLI.hpp>
 #include <fmt/core.h>
 
-// WAO: Adding include for sampler header
+// WAO: Adding include for sampler and FDT header
 #include "sampler.h"
+#include "fdt.h"
 
 // WAO: Include IOStream for convenience
 #include <iostream>
 
-// WAO: Create STLB sampler
+// WAO: Create STLB sampler and FDT
 sampler STLB_sampler = sampler();
+fdt STLB_FDT = fdt();
 
 namespace champsim
 {

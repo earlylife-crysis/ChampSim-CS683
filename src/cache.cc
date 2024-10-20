@@ -32,12 +32,14 @@
 #include "util/span.h"
 #include <fmt/core.h>
 
-// WAO: Adding include for sampler header
+// WAO: Adding include for sampler and FDT
 #include "sampler.h"
+#include "fdt.h"
 #include <iostream>
 
-// WAO: Use STLB sampler created in main.cc
+// WAO: Use STLB sampler and FDT created in main.cc
 extern sampler STLB_sampler;
+extern fdt STLB_FDT;
 
 CACHE::tag_lookup_type::tag_lookup_type(request_type req, bool local_pref, bool skip)
     : address(req.address), v_address(req.v_address), data(req.data), ip(req.ip), instr_id(req.instr_id), pf_metadata(req.pf_metadata), cpu(req.cpu),
