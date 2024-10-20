@@ -131,5 +131,10 @@ int main(int argc, char** argv)
   // WAO: Print contents of STLB_sampler
   std::cout << "Contents of STLB Sampler\n";
   STLB_sampler.print_contents();
+
+  // WAO: Print contents of FDT
+  std::cout << "Contents of FDT\n";
+  STLB_FDT.print_fdt();
+
   return 0;
 }

@@ -215,6 +215,17 @@ bool CACHE::try_hit(const tag_lookup_type& handle_pkt)
     if (useful_prefetch) {
       ++sim_stats.pf_useful;
       way->prefetch = false;
+
+      #ifdef SBFP_ENABLE
+      // WAO: Update FDT for STLB prefetched block hit
+      if(NAME == "cpu0_STLB")
+      {
+        if(way->free_pf_dist != 0)
+        {
+          STLB_FDT.update_fdt(way->free_pf_dist);
+        }
+      }
+      #endif
     }
   }
 
@@ -244,7 +255,20 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
     if (mshr_entry->type == access_type::PREFETCH && handle_pkt.type != access_type::PREFETCH) {
       // Mark the prefetch as useful
       if (mshr_entry->prefetch_from_this)
+      {
         ++sim_stats.pf_useful;
+
+        #ifdef SBFP_ENABLE
+        // WAO: Update FDT for STLB PQ hit
+        if(NAME == "cpu0_STLB")
+        {
+          if(mshr_entry->free_pf_dist != 0)
+          {
+            STLB_FDT.update_fdt(mshr_entry->free_pf_dist);
+          }
+        }
+        #endif
+      }
     }
 
     *mshr_entry = mshr_type::merge(*mshr_entry, to_allocate);
@@ -278,7 +302,21 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
 
     bool success;
     if (prefetch_as_load || handle_pkt.type != access_type::PREFETCH)
+    {
       success = lower_level->add_rq(fwd_pkt);
+
+      #ifdef SBFP_ENABLE
+      // WAO: Update FDT if hit in Sampler
+      if(NAME == "cpu0_STLB")
+      {
+        int pf_distance = STLB_sampler.check_hit((fwd_pkt.v_address) >> LOG2_PAGE_SIZE);
+        if(pf_distance != 0)  // Indicates a hit
+        {
+          STLB_FDT.update_fdt(pf_distance);
+        }
+      }
+      #endif
+    }
     else
       success = lower_level->add_pq(fwd_pkt);
 
@@ -510,19 +548,44 @@ int CACHE::prefetch_line(uint64_t pf_addr, bool fill_this_level, uint32_t prefet
     //std::cout << vpn_base << " " << offset << "\n";
 
     // Add all translations in block with appropriate free distances (except the actual VPN)
+    // Also query FDT to see if the corresponding free distance is above the threshold to issue a prefetch request
     for(int i = 0; i < 8; i++)
     {
       if(i != (int) offset)
       {
         uint64_t vpn_insert = vpn_base + (i * 8);
         int8_t free_pf_dist_insert = i - (int)offset;
-        STLB_sampler.add_entry(vpn_insert, free_pf_dist_insert);
+        
+        if(STLB_FDT.insert_sampler(free_pf_dist_insert))  // Insert into sampler
+        {
+          STLB_sampler.add_entry(vpn_insert, free_pf_dist_insert);
+        }
+        else  // Get prefetch
+        {
+          ++sim_stats.pf_requested;
+          if (std::size(internal_PQ) >= PQ_SIZE)  // Break if internal PQ is larger than PQ_SIZE
+          {
+            break;
+          }
+
+          request_type free_pf_packet;
+          free_pf_packet.type = access_type::PREFETCH;
+          free_pf_packet.pf_metadata = prefetch_metadata;
+          free_pf_packet.cpu = cpu;
+          free_pf_packet.address = vpn_insert << LOG2_PAGE_SIZE;
+          free_pf_packet.v_address = virtual_prefetch ? pf_packet.address : 0;
+          free_pf_packet.is_translated = !virtual_prefetch;
+          free_pf_packet.free_pf_dist = free_pf_dist_insert;
+
+          internal_PQ.emplace_back(free_pf_packet, true, !fill_this_level);
+          ++sim_stats.pf_issued;
+          std::cout << "Free PF at distance " << (int) free_pf_dist_insert << "\n";
+        }
         //std::cout << vpn_insert << " " << (int)free_pf_dist_insert << "\n";
       }
     }
   }
   #endif
-  
   return true;
 }
 
