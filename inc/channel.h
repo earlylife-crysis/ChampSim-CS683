@@ -79,6 +79,8 @@ class channel
     uint64_t instr_id = 0;
     uint64_t ip = 0;
 
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
+
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
   };
 
@@ -89,11 +91,13 @@ class channel
     uint32_t pf_metadata = 0;
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
 
-    response(uint64_t addr, uint64_t v_addr, uint64_t data_, uint32_t pf_meta, std::vector<std::reference_wrapper<ooo_model_instr>> deps)
-        : address(addr), v_address(v_addr), data(data_), pf_metadata(pf_meta), instr_depend_on_me(deps)
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
+
+    response(uint64_t addr, uint64_t v_addr, uint64_t data_, uint32_t pf_meta, std::vector<std::reference_wrapper<ooo_model_instr>> deps, int8_t free_pf_distance)
+        : address(addr), v_address(v_addr), data(data_), pf_metadata(pf_meta), instr_depend_on_me(deps), free_pf_dist(free_pf_distance)
     {
     }
-    explicit response(request req) : response(req.address, req.v_address, req.data, req.pf_metadata, req.instr_depend_on_me) {}
+    explicit response(request req) : response(req.address, req.v_address, req.data, req.pf_metadata, req.instr_depend_on_me, req.free_pf_dist) {}
   };
 
   template <typename R>

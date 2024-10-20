@@ -79,6 +79,8 @@ class CACHE : public champsim::operable
     bool is_translated;
     bool translate_issued = false;
 
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
+
     uint8_t asid[2] = {std::numeric_limits<uint8_t>::max(), std::numeric_limits<uint8_t>::max()};
 
     uint64_t event_cycle = std::numeric_limits<uint64_t>::max();
@@ -107,6 +109,8 @@ class CACHE : public champsim::operable
 
     uint64_t event_cycle = std::numeric_limits<uint64_t>::max();
     uint64_t cycle_enqueued;
+    
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
 
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
     std::vector<std::deque<response_type>*> to_return{};
@@ -134,6 +138,8 @@ class CACHE : public champsim::operable
     uint64_t data = 0;
 
     uint32_t pf_metadata = 0;
+
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
 
     BLOCK() = default;
     explicit BLOCK(mshr_type mshr);

@@ -51,7 +51,7 @@ long MEMORY_CONTROLLER::operate()
     if (warmup) {
       for (auto& entry : channel.RQ) {
         if (entry.has_value()) {
-          response_type response{entry->address, entry->v_address, entry->data, entry->pf_metadata, entry->instr_depend_on_me};
+          response_type response{entry->address, entry->v_address, entry->data, entry->pf_metadata, entry->instr_depend_on_me, entry->free_pf_dist};  // WAO: Added free prefetch distance
           for (auto ret : entry.value().to_return)
             ret->push_back(response);
 
@@ -75,7 +75,8 @@ long MEMORY_CONTROLLER::operate()
     if (channel.active_request != std::end(channel.bank_request) && channel.active_request->event_cycle <= current_cycle) {
       response_type response{channel.active_request->pkt->value().address, channel.active_request->pkt->value().v_address,
                              channel.active_request->pkt->value().data, channel.active_request->pkt->value().pf_metadata,
-                             channel.active_request->pkt->value().instr_depend_on_me};
+                             channel.active_request->pkt->value().instr_depend_on_me,
+                             channel.active_request->pkt->value().free_pf_dist};  // WAO: Added free prefetch distance
       for (auto ret : channel.active_request->pkt->value().to_return)
         ret->push_back(response);
 
@@ -241,7 +242,7 @@ void DRAM_CHANNEL::check_collision()
       };
       if (auto wq_it = std::find_if(std::begin(WQ), std::end(WQ), checker); wq_it != std::end(WQ)) {
         response_type response{rq_it->value().address, rq_it->value().v_address, rq_it->value().data, rq_it->value().pf_metadata,
-                               rq_it->value().instr_depend_on_me};
+                               rq_it->value().instr_depend_on_me, rq_it->value().free_pf_dist};  // WAO: Added free prefetch distance
         response.data = wq_it->value().data;
         for (auto ret : rq_it->value().to_return)
           ret->push_back(response);
@@ -290,7 +291,7 @@ void MEMORY_CONTROLLER::initiate_requests()
 }
 
 DRAM_CHANNEL::request_type::request_type(typename champsim::channel::request_type req)
-    : pf_metadata(req.pf_metadata), address(req.address), v_address(req.address), data(req.data), instr_depend_on_me(req.instr_depend_on_me)
+    : pf_metadata(req.pf_metadata), address(req.address), v_address(req.address), data(req.data), instr_depend_on_me(req.instr_depend_on_me), free_pf_dist(req.free_pf_dist)  // WAO: Added free prefetch distance
 {
   asid[0] = req.asid[0];
   asid[1] = req.asid[1];

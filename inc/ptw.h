@@ -59,6 +59,8 @@ class PageTableWalker : public champsim::operable
 
     std::size_t translation_level = 0;
 
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
+
     mshr_type(request_type req, std::size_t level);
   };
 

@@ -40,7 +40,7 @@ PageTableWalker::PageTableWalker(Builder b)
 
 PageTableWalker::mshr_type::mshr_type(request_type req, std::size_t level)
     : address(req.address), v_address(req.v_address), instr_depend_on_me(req.instr_depend_on_me), pf_metadata(req.pf_metadata), cpu(req.cpu),
-      translation_level(level)
+      translation_level(level), free_pf_dist(req.free_pf_dist)  // WAO: Added free prefetch distance
 {
   asid[0] = req.asid[0];
   asid[1] = req.asid[1];
@@ -101,6 +101,8 @@ auto PageTableWalker::step_translation(const mshr_type& source) -> std::optional
   packet.is_translated = true;
   packet.type = access_type::TRANSLATION;
 
+  packet.free_pf_dist = source.free_pf_dist;  // WAO: Added free prefetch distance
+
   bool success = lower_level->add_rq(packet);
 
   if (success)
@@ -124,7 +126,7 @@ long PageTableWalker::operate()
                                                              [cycle = current_cycle](const auto& pkt) { return pkt.event_cycle <= cycle; });
   std::for_each(complete_begin, complete_end, [](auto& mshr_entry) {
     for (auto ret : mshr_entry.to_return)
-      ret->emplace_back(mshr_entry.v_address, mshr_entry.v_address, mshr_entry.data, mshr_entry.pf_metadata, mshr_entry.instr_depend_on_me);
+      ret->emplace_back(mshr_entry.v_address, mshr_entry.v_address, mshr_entry.data, mshr_entry.pf_metadata, mshr_entry.instr_depend_on_me, mshr_entry.free_pf_dist);
   });
   fill_bw -= std::distance(complete_begin, complete_end);
   progress += std::distance(complete_begin, complete_end);

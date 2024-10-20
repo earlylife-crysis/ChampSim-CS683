@@ -52,6 +52,8 @@ struct DRAM_CHANNEL {
     std::vector<std::reference_wrapper<ooo_model_instr>> instr_depend_on_me{};
     std::vector<std::deque<response_type>*> to_return{};
 
+    int8_t free_pf_dist = 0;  // WAO: Added free prefetch distance
+
     explicit request_type(typename champsim::channel::request_type);
   };
   using value_type = request_type;
