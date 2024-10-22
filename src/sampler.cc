@@ -7,19 +7,45 @@
 
 void sampler::add_entry(uint64_t vpn_entered, int8_t free_pf_dist_entered)
 {
-    // First check if an entry is available in the sampler
+    // First check if entry is already added in the sampler (and update its free PF distance)
     int sampler_entry = SAMPLER_SIZE;
     for(int i = 0; i < SAMPLER_SIZE; i++)
     {
-        if(valid[i] == 0)
+        if(vpn[i] == vpn_entered)
         {
             sampler_entry = i;
-            // Increment FIFO counters
-            for(int j = 0; j < i; j++)
+            fifo[i] = 0;
+            free_pf_dist[i] = free_pf_dist_entered;
+
+            // Update FIFO counters for other valid blocks
+            for(int j = 0; j < SAMPLER_SIZE; j++)
             {
-                fifo[j]++;
+                if(j != sampler_entry && valid[j] != 0)
+                {
+                    fifo[j]++;
+                }
             }
-            break;
+        }
+    }
+
+    // Then check if an empty entry is available in the sampler
+    if(sampler_entry == SAMPLER_SIZE)
+    {
+        for(int i = 0; i < SAMPLER_SIZE; i++)
+        {
+            if(valid[i] == 0)
+            {
+                sampler_entry = i;
+                // Increment FIFO counters for all other valid blocks
+                for(int j = 0; j < i; j++)
+                {
+                    if(j != sampler_entry && valid[j] != 0)
+                    {
+                        fifo[j]++;
+                    }
+                }
+                break;
+            }
         }
     }
 
