@@ -14,17 +14,16 @@ void sampler::add_entry(uint64_t vpn_entered, int8_t free_pf_dist_entered)
         if(vpn[i] == vpn_entered)
         {
             sampler_entry = i;
-            fifo[i] = 0;
-            free_pf_dist[i] = free_pf_dist_entered;
-
-            // Update FIFO counters for other valid blocks
+            // Update FIFO counters for other valid blocks with lower FIFO values
             for(int j = 0; j < SAMPLER_SIZE; j++)
             {
-                if(j != sampler_entry && valid[j] != 0)
+                if(fifo[j] < fifo[sampler_entry] && valid[j] != 0)
                 {
                     fifo[j]++;
                 }
             }
+            fifo[sampler_entry] = 0;
+            break;
         }
     }
 
@@ -36,8 +35,8 @@ void sampler::add_entry(uint64_t vpn_entered, int8_t free_pf_dist_entered)
             if(valid[i] == 0)
             {
                 sampler_entry = i;
-                // Increment FIFO counters for all other valid blocks
-                for(int j = 0; j < i; j++)
+                // Update FIFO counters for other valid blocks
+                for(int j = 0; j < SAMPLER_SIZE; j++)
                 {
                     if(j != sampler_entry && valid[j] != 0)
                     {
@@ -67,6 +66,7 @@ void sampler::add_entry(uint64_t vpn_entered, int8_t free_pf_dist_entered)
     // Invalid case
     if(sampler_entry == SAMPLER_SIZE)
     {
+        print_contents();
         assert(0);
     }
 

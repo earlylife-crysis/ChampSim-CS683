@@ -7,6 +7,10 @@
 #include <string.h>
 #include <sstream>
 
+// WAO: Adding header file for Sampler and FDT
+#include "sampler.h"
+#include "fdt.h"
+
 #define PHASE_SIZE_IN_CYCLES 100000
 
 uint64_t phase_id = 0;
@@ -15,6 +19,13 @@ uint64_t phase_id = 0;
 //#define IPCP_PREFETCHER
 //#define BINGO_PREFETCHER
 
+// WAO: Initialize STLB sampler and FDT if SBFP is activated
+#ifdef SBFP_ENABLE
+
+fdt STLB_FDT = fdt();
+sampler STLB_Sampler = sampler();
+
+#endif
 
 #ifdef CAPTURE_DYNAMIC_ENERGY_PROFILE
 
@@ -1857,5 +1868,13 @@ int main(int argc, char** argv)
             for (pr = page_table.begin(); pr != page_table.end(); pr++) {
 		cout << "PT: " << pr->first << " " << pr->second << endl;
             }*/
+
+    // WAO: Printing out STLB Sampler contents
+    #ifdef SBFP_ENABLE
+
+    cout << "SBFP Sampler contents for STLB\n";
+    STLB_Sampler.print_contents();
+
+    #endif
     return 0;
 }

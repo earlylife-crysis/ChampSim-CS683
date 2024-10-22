@@ -7,6 +7,18 @@
 
 #include<iterator>
 
+// WAO: Add sampler and FDT headers
+#include "sampler.h"
+#include "fdt.h"
+
+// WAO: Add STLB Sampler and FDT as extern variables
+#ifdef SBFP_ENABLE
+
+extern fdt STLB_FDT;
+extern sampler STLB_Sampler;
+
+#endif
+
 uint64_t l2pf_access = 0;
 uint8_t L2C_BYPASS_KNOB = 0;    //Neelu: Set to 1: Bypass Instructions 2: Bypass Data 3: Bypass All
 
@@ -3693,6 +3705,31 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                 add_pq(&pf_packet);
                 DP ( if (warmup_complete[pf_packet.cpu]) {cout << "returned from add_pq" << endl; });
                 pf_issued++;
+
+                // WAO: Add free prefetches to Sampler
+                #ifdef SBFP_ENABLE
+
+                if(cache_type == IS_STLB)
+                {
+                    uint64_t vpn = pf_addr >> LOG2_PAGE_SIZE;
+                    uint64_t offset = vpn % 8;  // WAO: Compute the offset of the requested VPN within the cache block
+                    uint64_t vpn_base = vpn - offset;
+                    //cout << "VPN and offset " << vpn << " " << offset << "\n";
+
+                    // Add the available free VPNs to the sampler
+                    for(int i = 0; i < 8; i++)
+                    {
+                        int8_t free_pf_distance = i - (int)offset;
+                        uint64_t vpn_insert = vpn_base + i;
+                        //cout << vpn_insert << " " << (int)free_pf_distance << "\n";
+                        if(free_pf_distance != 0)  // Insert only for non zero prefetch distance
+                        {
+                            STLB_Sampler.add_entry(vpn_insert, free_pf_distance);
+                        }
+                    }
+                }
+
+                #endif
 
                 return 1;
             }
