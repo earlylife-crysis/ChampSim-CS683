@@ -442,6 +442,9 @@ void CACHE::handle_fill()
                     writeback_packet.type = WRITEBACK;
                     writeback_packet.event_cycle = current_core_cycle[fill_cpu];
 
+                    // WAO: Augmentation to allow for free-prefetch distance to be held
+                    writeback_packet.free_pf_dist = block[set][way].free_pf_dist;
+
                     lower_level->add_wq(&writeback_packet);
                 }
             }
@@ -899,7 +902,7 @@ if (writeback_cpu == NUM_CPUS)
                     PACKET new_packet = WQ.entry[index];
                     //@Vishal: Send physical address to lower level and track physical address in MSHR  
                     new_packet.address = WQ.entry[index].full_physical_address >> LOG2_BLOCK_SIZE;
-                    new_packet.full_addr = WQ.entry[index].full_physical_address; 
+                    new_packet.full_addr = WQ.entry[index].full_physical_address;
 
 
                     // add it to mshr (RFO miss)
@@ -1025,6 +1028,9 @@ if (writeback_cpu == NUM_CPUS)
                             writeback_packet.ip = 0;
                             writeback_packet.type = WRITEBACK;
                             writeback_packet.event_cycle = current_core_cycle[writeback_cpu];
+
+                            // WAO: Augmentation to allow for free-prefetch distance to be held
+                            writeback_packet.free_pf_dist = block[set][way].free_pf_dist;
 
                             lower_level->add_wq(&writeback_packet);
                         }
@@ -1860,6 +1866,17 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                     pf_useful++;
                     block[set][way].prefetch = 0;
 
+                    // WAO: Increment FDT counter at prefetch hit
+                    #ifdef SBFP_ENABLE
+
+                    if(cache_type == IS_STLB)
+                        if(block[set][way].free_pf_dist != 0)  // Update FDT if non-zero free prefetch distance
+                        {
+                            STLB_FDT.update_fdt(block[set][way].free_pf_dist);
+                        }
+
+                    #endif
+
                     //Neelu: IPCP prefetch stats
                     if(block[set][way].pref_class < 5)
                         pref_useful[cpu][block[set][way].pref_class]++;
@@ -1885,6 +1902,23 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                     // check mshr
                     uint8_t miss_handled = 1;
                     int mshr_index = check_nonfifo_queue(&MSHR, &RQ.entry[index],false); //@Vishal: Updated from check_mshr
+
+                    // WAO: Check sampler if missed translation is available
+                    #ifdef SBFP_ENABLE
+
+                    if(cache_type == IS_STLB)
+                    {
+                        uint64_t vpn = (RQ.entry->full_addr) >> LOG2_PAGE_SIZE;
+                        int8_t free_pf_dist = STLB_Sampler.check_hit(vpn);
+
+                        // Update FDT for non zero free_pf_dist
+                        if(free_pf_dist != 0)
+                        {
+                            STLB_FDT.update_fdt(free_pf_dist);
+                        }
+                    }
+
+                    #endif
 
                     if(mshr_index == -2)
                     {
@@ -2972,6 +3006,9 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
             block[set][way].cpu = packet->cpu;
             block[set][way].instr_id = packet->instr_id;
 
+            // WAO: Augmentation to allow for free-prefetch distance to be held
+            block[set][way].free_pf_dist = packet->free_pf_dist;
+
             DP ( if (warmup_complete[packet->cpu] ) {
                     cout << "[" << NAME << "] " << __func__ << " set: " << set << " way: " << way;
                     cout << " lru: " << block[set][way].lru << " tag: " << hex << block[set][way].tag << " full_addr: " << block[set][way].full_addr;
@@ -3700,6 +3737,9 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                 pf_packet.prefetch_id = prefetch_id;
                 pf_packet.type = PREFETCH_TRANSLATION;
                 pf_packet.event_cycle = current_core_cycle[cpu];
+
+                // WAO: Augmentation to allow for free-prefetch distance to be held
+                pf_packet.free_pf_dist = 0;
 
                 // give a dummy 0 as the IP of a prefetch
                 add_pq(&pf_packet);

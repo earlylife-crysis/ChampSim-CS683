@@ -1875,6 +1875,9 @@ int main(int argc, char** argv)
     cout << "SBFP Sampler contents for STLB\n";
     STLB_Sampler.print_contents();
 
+    cout << "\nFDT contents for STLB\n";
+    STLB_FDT.print_fdt();
+
     #endif
     return 0;
 }

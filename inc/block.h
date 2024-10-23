@@ -32,6 +32,9 @@ class BLOCK {
     // replacement state
     uint32_t lru;
 
+    // WAO: Augmentation to allow for free-prefetch distance to be held
+    int8_t free_pf_dist;
+
     BLOCK() {
         valid = 0;
         prefetch = 0;
@@ -55,6 +58,9 @@ class BLOCK {
         instr_id = 0;
 
         lru = 0;
+
+        // WAO: Augmentation to allow for free-prefetch distance to be held
+        free_pf_dist = 0;
     };
 };
 
@@ -144,6 +150,9 @@ class PACKET {
              event_cycle,
              cycle_enqueued;
 
+    // WAO: Augmentation to allow for free-prefetch distance to be held
+    int8_t free_pf_dist;
+
     PACKET() {
         instruction = 0;
 	is_data = 1;
@@ -213,6 +222,9 @@ class PACKET {
         l1_pq_index = -1;
     	full_physical_address = 0;
 	send_both_tlb = false;
+
+    // WAO: Augmentation to allow for free-prefetch distance to be held
+    free_pf_dist = 0;
     };
 };
 
