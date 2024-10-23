@@ -1,0 +1,212 @@
+#include "cache.h"
+#include <cmath>
+
+#define TABLE_SIZE 128
+#define ASSOC 128
+#define DEBUG 0
+#define DISTANCE_LIMIT 2147483640
+#define INVALID 33333333
+
+class INFO_TRACKER{
+	public:
+		uint64_t distance;
+		uint64_t pr1;
+		uint64_t pr2;
+		uint64_t timestamp;
+		int flag;
+		INFO_TRACKER(){
+			distance = 0;
+			pr1 = INVALID;
+			pr2 = INVALID;
+			timestamp = 0;
+			flag = 0;
+		}
+};
+
+INFO_TRACKER tracker[(int)pow(2.0, ceil(log2(TABLE_SIZE/ASSOC)))][ASSOC];
+
+uint64_t time_c; 
+uint64_t previous_vpn;
+uint64_t previous_distance;
+uint64_t previous_pos;
+
+int search_dist_table(int index, uint64_t current_distance){
+	for(int i=0; i<ASSOC; i++){
+		if(current_distance == tracker[index][i].distance)
+			return i;
+	}
+	return -1;
+}
+
+int lru_evict_dist_table(int index){
+	uint64_t lru_min = tracker[index][0].timestamp;
+	int lru_victim = 0;
+	for(int m=1; m<ASSOC; m++){
+		if(tracker[index][m].timestamp < lru_min){
+			lru_min = tracker[index][m].timestamp;
+			lru_victim = m;
+		}
+	}
+	return lru_victim;
+}
+
+void show_table(){
+	int x = TABLE_SIZE / ASSOC;
+	cout << "\nDISTANCE TABLE\n" << endl;
+	for(int i=0; i<x; i++){
+		for(int j=0; j<ASSOC; j++){
+			cout << tracker[i][j].distance << " | " << tracker[i][j].pr1 << " | " << tracker[i][j].pr2 << " | " << tracker[i][j].timestamp  << " | " << tracker[i][j].flag << " |*| ";
+		}
+		cout << endl;
+	}
+}
+
+
+void CACHE::stlb_prefetcher_initialize() 
+{
+	cout << "CPU " << cpu << " STLB -- Distance Prefetcher (DP)" << endl;
+	time_c = 0;
+	previous_vpn = 0;
+}
+
+void CACHE::stlb_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
+{
+	uint64_t index, current_vpn, current_distance, current_distance_indexing;
+	int ignore = 0, free_bit = 0, cache_line_position, acc, pos, evicted_pos;
+	int bits = ceil(log2(TABLE_SIZE/ASSOC));
+	time_c++; 
+
+	current_vpn = addr;
+
+	if(current_vpn < previous_vpn){
+		current_distance_indexing = previous_vpn - current_vpn;
+		if(current_distance_indexing > DISTANCE_LIMIT)
+			ignore = 1;
+		else
+			current_distance = DISTANCE_LIMIT - current_distance_indexing;
+	}
+	else{
+		current_distance_indexing = current_vpn - previous_vpn;
+		if(current_distance_indexing > DISTANCE_LIMIT)
+			ignore = 1;
+		else
+			current_distance = DISTANCE_LIMIT + current_distance_indexing;
+	}        
+
+	if(ignore){
+		int cx = 0;
+	}
+	else{
+		index =  current_distance & ((1 << bits) - 1);
+		pos = search_dist_table(index, current_distance); 
+
+		if(pos == -1){
+			evicted_pos = lru_evict_dist_table(index);
+			tracker[index][evicted_pos].distance = current_distance;
+			tracker[index][evicted_pos].pr1 = INVALID;
+			tracker[index][evicted_pos].pr2 = INVALID;
+			tracker[index][evicted_pos].timestamp = time_c;
+			tracker[index][evicted_pos].flag = 0;
+		}
+		else{
+			uint64_t prefetch_todo;
+			tracker[index][pos].timestamp = time_c;
+
+			if(tracker[index][pos].pr1 != INVALID){
+
+				if(answer == -1 && ENABLE_FP){
+					cache_line_position = (current_vpn & 0x07);
+					if(((cache_line_position + tracker[index][pos].pr1 - DISTANCE_LIMIT) < 8) && ((cache_line_position + tracker[index][pos].pr1 - DISTANCE_LIMIT) >= 0))
+						free_bit = 1;
+				}
+
+				if(CLOUD_SUITE)
+					prefetch_todo = current_vpn + (tracker[index][pos].pr1 - DISTANCE_LIMIT);
+				else
+					prefetch_todo = current_vpn + (tracker[index][pos].pr1 - DISTANCE_LIMIT);
+
+				prefetch_page(ip, addr, prefetch_todo, FILL_L2, 0, free_bit, free_bit,0, instr_id, type, iflag,0,0,0);
+			}
+
+			free_bit = 0;
+			if(tracker[index][pos].pr2 != INVALID){
+
+				if(answer == -1 && ENABLE_FP){
+					cache_line_position = (current_vpn & 0x07);
+					if(((cache_line_position + tracker[index][pos].pr1 - DISTANCE_LIMIT) < 8) && ((cache_line_position + tracker[index][pos].pr1 - DISTANCE_LIMIT) >= 0))
+						free_bit = 1;
+				}
+
+				if(CLOUD_SUITE)
+					prefetch_todo = current_vpn + (tracker[index][pos].pr2 - DISTANCE_LIMIT);
+				else
+					prefetch_todo = current_vpn + (tracker[index][pos].pr2 - DISTANCE_LIMIT);
+
+				prefetch_page(ip, addr, prefetch_todo, FILL_L2, 0, free_bit, free_bit, 0, instr_id, type, iflag,0,0,0);
+
+				cache_line_position = (prefetch_todo & 0x07);
+
+				if(ENABLE_FP)
+					free_prefetching(ip, addr, cache_line_position, prefetch_todo, free_indexes, instr_id, type, iflag);
+			}
+		}
+
+		if(previous_distance != 0){
+			int index_prev_dist = previous_distance & ((1 << bits) - 1);
+			if(tracker[index_prev_dist][previous_pos].pr1 != current_distance && tracker[index_prev_dist][previous_pos].pr2 != current_distance){
+				if(tracker[index_prev_dist][previous_pos].pr1 == INVALID)
+					tracker[index_prev_dist][previous_pos].pr1 = current_distance;
+				else if(tracker[index_prev_dist][previous_pos].pr2 == INVALID)
+					tracker[index_prev_dist][previous_pos].pr2 = current_distance;
+				else{
+					if(tracker[index_prev_dist][previous_pos].flag == 0){
+						tracker[index_prev_dist][previous_pos].pr1 = current_distance;
+						tracker[index_prev_dist][previous_pos].flag = 1;
+					}
+					else{
+						tracker[index_prev_dist][previous_pos].pr2 = current_distance;
+						tracker[index_prev_dist][previous_pos].flag = 0;
+					}
+				}
+			}
+		}
+	}
+
+	if(DEBUG){
+		show_table();
+		cout << endl;
+	}
+
+	if(!ignore){
+		previous_distance = current_distance; 
+		if(pos == -1)
+			previous_pos = evicted_pos;
+		else
+			previous_pos = pos;
+	}
+	previous_vpn = current_vpn;
+}
+
+void CACHE::stlb_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr)
+{
+
+}
+
+void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint64_t misses, uint64_t swap, uint64_t dupli, uint64_t free, uint64_t real, uint64_t * mmu_cache_demand_hits, uint64_t * mmu_cache_prefetch_hits, uint64_t * rfhits, uint64_t * free_hits, uint64_t mr[4][4], uint64_t stlb_misses[2])
+{
+	cout << endl << "*******************************************" << endl;
+	cout << "CPU " << cpu << " STLB -- Distance Prefetcher final stats" << endl;
+	cout << "*******************************************" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "D-STLB MISSES: " << stlb_misses[0] << endl;
+	cout << "I-STLB MISSES: " << stlb_misses[1] << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "PQ hits: " << hits << endl; 
+	cout << "PQ misses: " << misses << endl;
+	cout << "-------------------------------------------" << endl;
+}
+
+

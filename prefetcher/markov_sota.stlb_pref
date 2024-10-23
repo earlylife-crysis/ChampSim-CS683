@@ -1,0 +1,418 @@
+#include "cache.h"
+#include <cmath>
+#include <vector>   
+#include <algorithm>
+#include <random>
+
+#define MARKOV_TABLE_SETS 256
+#define MARKOV_ASSOC 256
+
+#define INVALID 55555
+
+#define DEBUG 0
+
+class MARKOV_CHAIN{
+	public:
+		uint64_t vpn;
+		uint64_t pr[SUCCESSORS];
+		uint64_t timestamp; // for LRU policy
+		int confidence[SUCCESSORS]; // determine how bits should be each of these counters
+		int sign[SUCCESSORS]; // each prediction entry (successor) has its corresponding sign
+		int flag; // for FIFO policy
+		int freq; // for LFU policy
+		MARKOV_CHAIN(){
+			vpn = 0;
+			for(int i=0; i<SUCCESSORS; i++){
+				pr[i] = INVALID;
+				sign[i] = 0; // 0:+ 1:-
+				confidence[i] = 0;
+			}
+			timestamp = 0;
+			flag = 0;
+			freq = 0;
+		}   
+};
+MARKOV_CHAIN markov[(int)pow(2.0, ceil(log2(MARKOV_TABLE_SETS/MARKOV_ASSOC)))][MARKOV_ASSOC];
+
+uint64_t timer; //LRU timer
+uint64_t previous_vpn; // for updating the prediction table
+uint64_t pt_hit, pt_miss; // for the conflict ratio of the prediction table
+// double lad_accuracy; // accuracy of lookahead prefetching
+
+// identify if a specific vpn resides in the prediction table
+int search_markov_table(int index, uint64_t current_vpn){
+	for(int i=0; i<MARKOV_ASSOC; i++){
+		if(current_vpn == markov[index][i].vpn)
+			return i;
+	}   
+	return -1; 
+}
+
+// lru replacement policy for the prediction table
+int lru_policy(int index){
+	uint64_t lru_min = markov[index][0].timestamp;
+	int lru_victim = 0;
+	for(int m=1; m<MARKOV_ASSOC; m++){
+		if(markov[index][m].timestamp < lru_min){
+			lru_min = markov[index][m].timestamp;
+			lru_victim = m;
+		}
+	}
+	return lru_victim;
+}
+
+// sorting function for lfu replacement policy
+bool sortcol(const vector<int>& v1, const vector<int>& v2 ){
+	return (v1[1] < v2[1]);
+}
+
+// lfu replacement policy for the prediction table
+int lfu_policy(int index){
+
+	vector<vector<int>> lrufreq(MARKOV_ASSOC, vector<int>(2,0));
+
+	for(int j=0; j<MARKOV_ASSOC; j++){
+		lrufreq[j][0] = markov[index][j].timestamp;
+		lrufreq[j][1] = markov[index][j].freq;
+	}
+
+	sort(lrufreq.begin(), lrufreq.end(), sortcol);
+
+	int llimit;
+	if(MARKOV_ASSOC > 8)
+		llimit = LLIMIT; 
+	else
+		llimit = MARKOV_ASSOC;
+
+	random_device rand_dev;
+	mt19937 generator(rand_dev());
+	uniform_int_distribution<int>  distr(0, llimit-1);
+	int random_set = distr(generator);
+
+	//int victim_timestamp = lrufreq[random_set][0];
+	int victim_timestamp = lrufreq[0][0]; // this is useful for deterministic design comparison -- for evaluation uncomment the previous line
+	for(int m=0; m<MARKOV_ASSOC; m++){
+		if(markov[index][m].timestamp == victim_timestamp)
+			return m;
+	}
+	cout << "You should not have reached this point :(" << endl;
+}
+
+// random replacement policy for the prediction table
+int random_policy(){
+	const int range_from = 0;
+	const int range_to = MARKOV_TABLE_SETS - 1;
+
+	random_device rand_dev;
+	mt19937 generator(rand_dev());
+	uniform_int_distribution<int> distr(range_from, range_to);
+
+	int random_set = distr(generator);
+
+	return random_set;
+}
+
+// partially shows the prediction table content
+void show_table_markov(){
+	int x = MARKOV_TABLE_SETS / MARKOV_ASSOC;
+	cout << endl << "MARKOV TABLE" << endl;
+	for(int i=0; i<x; i++){
+		for(int j=0; j<MARKOV_ASSOC; j++){
+			cout << markov[i][j].vpn << " | "; 
+			for(int k=0; k<SUCCESSORS; k++)
+				cout << markov[i][j].pr[k] << " | " ;
+			cout << markov[i][j].timestamp << " | " << markov[i][j].freq << " *| ";
+		}
+		cout << endl;
+	}
+}
+
+// reseting the frequency counters of the LFU replacement policy
+void reset_frequency(){
+	int x = MARKOV_TABLE_SETS / MARKOV_ASSOC;
+	for(int i=0; i<x; i++){
+		for(int j=0; j<MARKOV_ASSOC; j++){
+			markov[i][j].freq = 0;
+		}
+	}
+}
+
+
+void CACHE::stlb_prefetcher_initialize() 
+{
+	cout << "CPU " << cpu << " STLB -- SOTA Markov I-TLB Prefetcher" << endl;
+	timer = 0;
+	previous_vpn = 0;
+	pt_hit  = 0; 
+	pt_miss  = 0; 
+}
+
+void CACHE::stlb_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
+{
+	uint64_t current_vpn, pf_addr, current_distance, pf_page, clp;
+	int cache_line_pos, free_bit, bits, index, way, victim, current_sign, skipit, ignore;
+
+	timer++;
+
+	free_bit = 0;
+	current_sign = 0;
+	skipit = 0;
+	current_vpn = addr;
+
+	if(current_vpn > previous_vpn){
+		current_distance = current_vpn - previous_vpn;
+		current_sign = 0;
+	}
+	else{
+		current_distance = previous_vpn - current_vpn;
+		current_sign = 1;
+	}	
+
+	//show_table_markov();
+
+	if(answer == -1 && ENABLE_FP)
+		cache_line_pos = (current_vpn & 0x07);
+
+	int ss = MARKOV_TABLE_SETS / MARKOV_ASSOC;
+	for(int iy=0; iy<ss; iy++){
+		for(int jy=0; jy<MARKOV_ASSOC; jy++){
+			for(int ky=0; ky<SUCCESSORS; ky++){
+				if(current_vpn == (markov[iy][jy].vpn + (1-2*markov[iy][jy].sign[ky]) * markov[iy][jy].pr[ky])){
+					if(markov[iy][jy].confidence[ky] < pow(2, CNF_BITS))
+						markov[iy][jy].confidence[ky]++;
+				}
+			}
+		}
+	}
+
+	/************************ PREDICTION TABLE LOOKUP ************************/
+
+	bits  = ceil(log2(MARKOV_TABLE_SETS/MARKOV_ASSOC));
+	index = current_vpn & ((1 << bits) - 1);
+	way   = search_markov_table(index, current_vpn);
+
+	if(way == -1){
+		victim = search_markov_table(index, 0); // if there is an invalid entry replace it, otherwise, find a victim based on the replacement policy that you use
+		if(victim == -1){
+			if(RP_MP == 0)
+				victim = lru_policy(index);
+			else if(RP_MP == 1)
+				victim = lfu_policy(index);
+			else if(RP_MP == 2)
+				victim = random_policy();
+			else
+				cout << "Please use an already implemented replacement policy for the prediction table" << endl;
+		}
+
+		markov[index][victim].vpn = current_vpn;
+		for(int k=0; k<SUCCESSORS; k++){
+			markov[index][victim].pr[k] = INVALID;
+			markov[index][victim].sign[k] = 0;
+			markov[index][victim].confidence[k] = 0;
+		}
+		markov[index][victim].timestamp = timer;
+		markov[index][victim].flag  = 0;
+		markov[index][victim].freq  = 0;
+	}
+	else{
+		//  ******************* PREDICTION TABLE HIT *********************
+		uint64_t pf_page;
+		markov[index][way].timestamp = timer;
+		markov[index][way].freq++;
+
+		int valid_successors = 0, max_confidence = 0, max_conf_pos = 0, min_confidence = 0, min_conf_pos = 0;
+		for(int k=0; k<SUCCESSORS; k++){
+			if(markov[index][way].pr[k] != INVALID){
+				valid_successors++;
+			}
+			if(markov[index][way].confidence[k] > max_confidence){
+				max_confidence = markov[index][way].confidence[k];
+				max_conf_pos = k;
+			}
+			if(markov[index][way].confidence[k] < min_confidence){
+				min_confidence = markov[index][way].confidence[k];
+				min_conf_pos = k;
+			}
+		}		
+
+		// exploting page table locality on demand page walks to convert some prefetches into free prefetches
+		if(answer == -1)
+			cache_line_pos = (current_vpn & 0x07);
+
+		int free_distance = 0;
+		for(int k=0; k<SUCCESSORS; k++){
+			if(markov[index][way].pr[k] != INVALID){
+				free_bit = 0;
+				free_distance = 0;
+				pf_page = current_vpn + (1-2*markov[index][way].sign[k]) * markov[index][way].pr[k];
+				if((answer == -1)){
+					if(current_vpn > pf_page){
+						if(current_vpn - pf_page + cache_line_pos < 8){
+							free_bit = 1;
+							free_distance = current_vpn - pf_page + cache_line_pos;
+						}
+					}
+					else{
+						if(pf_page - current_vpn + cache_line_pos < 8){
+							free_bit = 1;
+							free_distance = pf_page - current_vpn + cache_line_pos;
+						}
+					}
+				}
+
+				prefetch_page(ip, addr, pf_page, FILL_L2, 0, free_bit, free_bit, free_distance, instr_id, type, iflag, 0, 0, 1);
+			}
+		}
+	}
+
+	if(previous_vpn != 0){
+		index =  previous_vpn & ((1 << bits) - 1);
+		way   = search_markov_table(index, previous_vpn);
+
+		int bypass = 0; // 0: new successor , 1: redundant successor
+		for(int k=0; k<SUCCESSORS; k++){
+			if( (markov[index][way].pr[k] == current_distance) && (markov[index][way].sign[k] == current_sign) ){
+				bypass = 1;
+				break;
+			}
+		}
+
+		if(bypass == 0){
+			int placed = 0;
+			for(int k=0; k<SUCCESSORS; k++){
+				if(markov[index][way].pr[k] == INVALID){
+					markov[index][way].pr[k]   = current_distance;
+					markov[index][way].sign[k] = current_sign;
+					placed = 1;
+					break;
+				}
+			}
+
+			if(placed == 0){
+				if(RP_SUC_MP == 0){
+					// FIFO policy
+					markov[index][way].pr[markov[index][way].flag]   = current_distance;
+					markov[index][way].sign[markov[index][way].flag] = current_sign;
+					markov[index][way].flag = (markov[index][way].flag + 1)%SUCCESSORS;
+				}
+				else if(RP_SUC_MP == 1){
+					// RANDOM policy
+					random_device rand_dev;
+					mt19937 generator(rand_dev());
+					uniform_int_distribution<int>  distr(0, SUCCESSORS-1);
+					int random_successor = distr(generator);
+					markov[index][way].pr[random_successor] = current_distance;
+					markov[index][way].sign[random_successor] = current_sign;
+				}
+				else if(RP_SUC_MP == 2){
+					int min_confidence = markov[index][way].confidence[0];
+					int min_conf_pos = 0;
+					for(int k=0; k<SUCCESSORS; k++){
+						if(markov[index][way].confidence[k] < min_confidence){
+							min_confidence = markov[index][way].confidence[k];
+							min_conf_pos = k;
+						}
+					}
+					markov[index][way].pr[min_conf_pos]   = current_distance;
+					markov[index][way].sign[min_conf_pos] = current_sign;
+					markov[index][way].confidence[min_conf_pos] = 0;
+				}
+				else
+					cout << "you should use one of the implemented replacement policies for the successors" << endl;
+			}
+		}
+	}
+
+	if(decay_timer > RESET_FREQ){
+		reset_frequency();
+		decay_timer = 0;
+	}
+
+	if(skipit){
+		previous_vpn = 0;
+		cout << "You should not be here... this is not part of the implementation" << endl;
+	}
+	else
+		previous_vpn = current_vpn;
+}
+
+void CACHE::stlb_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr)
+{
+
+}
+
+void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint64_t misses, uint64_t swap, uint64_t dupli, uint64_t free, uint64_t real, uint64_t * mmu_cache_demand_hits, uint64_t * mmu_cache_prefetch_hits, uint64_t * rfhits, uint64_t * free_hits, uint64_t mr[4][4], uint64_t stlb_misses[2])
+{
+	cout << endl << "*******************************************" << endl;
+	cout << "CPU " << cpu << " STLB -- SOTA MARKOV final stats" << endl;
+	cout << "*******************************************" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "D-STLB MISSES: " << stlb_misses[0] << endl;
+	cout << "I-STLB MISSES: " << stlb_misses[1] << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "PQ hits: " << hits << endl; 
+	cout << "PQ misses: " << misses << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "Issued Prefetches: " << (prefetches - swap - dupli) << endl;
+	cout << "Free Prefetches:   " << free << endl;
+	cout << "Real Prefetches:   " << real << endl;
+	cout << "LAD-Free Prefetches: " << issued_prefetches_lad << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "Prefetch hits: " << rfhits[0] << endl;
+	cout << "LAD hits: "  << hit_prefetches_lad << endl; // all lad hits are free hits
+	cout << "Free Prefetch hits: " << rfhits[1] << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "Total instruction cache prefetches: "   << dec << bpbp[0] << endl;
+	cout << "Same page instruction prefetches: "     << dec << bpbp[1] << endl;
+	cout << "Beyond page instruction prefetches: "   << dec << bpbp[2] << endl;
+	cout << "Beyond page instruction prefetches (TLB hit): "    << dec << bpbp[3] << endl;
+	cout << "Beyond page instruction prefetches (TLB miss): "   << dec << bpbp[4] << endl;
+	cout << "Morrigan filter hits: "   << dec << morrigan_filter_hits << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "FCTB hits: "   << fctb_hits << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "PML4-D hits: " << mmu_cache_demand_hits[0] << endl;
+	cout << "PML4-P hits: " << mmu_cache_prefetch_hits[0] << endl;
+	cout << "PDP-D hits: " << mmu_cache_demand_hits[1] << endl;
+	cout << "PDP-P hits: " << mmu_cache_prefetch_hits[1] << endl;
+	cout << "PD-D hits: " << mmu_cache_demand_hits[2] << endl;
+	cout << "PD-P hits: " << mmu_cache_prefetch_hits[2] << endl;
+	cout << "Misses-D: " << mmu_cache_demand_hits[3] << endl;
+	cout << "Misses-P: " << mmu_cache_prefetch_hits[3] << endl;
+	cout << "-------------------------------------------" << endl;
+
+	cout << endl << "-------------------------------------------" << endl;
+	cout << "PML4-L1: "   << mr[0][0] << endl;
+	cout << "PML4-L2: "     << mr[0][1] << endl;
+	cout << "PML4-LLC: "    << mr[0][2] << endl;
+	cout << "PML4-DRAM: "   << mr[0][3] << endl;
+
+	cout << "\nPDP-L1: "   << mr[1][0] << endl;
+	cout << "PDP-L2: "     << mr[1][1] << endl;
+	cout << "PDP-LLC: "    << mr[1][2] << endl;
+	cout << "PDP-DRAM: "   << mr[1][3] << endl;
+
+	cout << "\nPD-L1: "   << mr[2][0] << endl;
+	cout << "PD-L2: "     << mr[2][1] << endl;
+	cout << "PD-LLC: "    << mr[2][2] << endl;
+	cout << "PD-DRAM: "   << mr[2][3] << endl;
+
+	cout << "\nPT-L1: "   << mr[3][0] << endl;
+	cout << "PT-L2: "     << mr[3][1] << endl;
+	cout << "PT-LLC: "    << mr[3][2] << endl;
+	cout << "PT-DRAM: "   << mr[3][3] << endl;
+	cout << "-------------------------------------------" << endl;
+}
