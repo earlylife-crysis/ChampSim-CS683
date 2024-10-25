@@ -39,9 +39,9 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 // Number of STLB instruction misses to reset frequency field of Markov Prefetcher used for the LFU policy
 #define RESET_FREQ 5000
 
-#define PML4_SET 2
-#define PDP_SET 4
-#define PD_SET 32
+#define PML4_SET 1
+#define PDP_SET 1
+#define PD_SET 8
 
 #define PML4_WAY 2
 #define PDP_WAY 4
