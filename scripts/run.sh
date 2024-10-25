@@ -23,9 +23,9 @@ mkdir -p $results_dir/$trace
 ((bin/sp_sbfp-0threshold$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp_sbfp-0threshold.txt 2>&1) &
 ((bin/sp_sbfp-disabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp_sbfp-disabled.txt 2>&1) &
 ((bin/sp_sbfp-enabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp_sbfp-enabled.txt 2>&1) &
-((bin/no_sbfp-0threshold$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-0threshold.txt 2>&1) &
-((bin/no_sbfp-disabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-disabled.txt 2>&1) &
-((bin/no_sbfp-enabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-enabled.txt 2>&1) &
+((bin/no-0threshold$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-0threshold.txt 2>&1) &
+((bin/no-disabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-disabled.txt 2>&1) &
+((bin/no-enabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-enabled.txt 2>&1) &
 wait
 done
 
