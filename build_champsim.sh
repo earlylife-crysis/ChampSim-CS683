@@ -1,21 +1,21 @@
 #!/bin/bash
 
-if [ "$#" -ne 9 ]; then
-    echo "Illegal number of parameters"
-    echo "Usage: ./build_champsim.sh [branch_pred] [l1d_pref] [l2c_pref] [llc_pref] [llc_repl] [num_core]"
-    exit 1
-fi
+# if [ "$#" -ne 9 ]; then
+#     echo "Illegal number of parameters"
+#     echo "Usage: ./build_champsim.sh [branch_pred] [l1d_pref] [l2c_pref] [llc_pref] [llc_repl] [num_core]"
+#     exit 1
+# fi
 
 # ChampSim configuration
-BRANCH=$1           # branch/*.bpred
-L1I_PREFETCHER=$2   # prefetcher/*.l1i_pref
-L1D_PREFETCHER=$3   # prefetcher/*.l1d_pref
-L2C_PREFETCHER=$4   # prefetcher/*.l2c_pref
-LLC_PREFETCHER=$5   # prefetcher/*.llc_pref
-LLC_REPLACEMENT=$6  # replacement/*.llc_repl
-NUM_CORE=$7         # tested up to 8-core system
-STLB_PREFETCHER=$8   # prefetcher/*.stlb_pref 
-BUILD_NAME=$9
+BRANCH="hashed_perceptron"          # branch/*.bpred
+L1I_PREFETCHER="no"   # prefetcher/*.l1i_pref
+L1D_PREFETCHER="next_line"   # prefetcher/*.l1d_pref
+L2C_PREFETCHER="ip_stride"   # prefetcher/*.l2c_pref
+LLC_PREFETCHER="no"   # prefetcher/*.llc_pref
+LLC_REPLACEMENT="lru"  # replacement/*.llc_repl
+NUM_CORE=1         # tested up to 8-core system
+STLB_PREFETCHER=$1   # prefetcher/*.stlb_pref 
+BUILD_NAME=$2
 
 ############## Some useful macros ###############
 BOLD=$(tput bold)
