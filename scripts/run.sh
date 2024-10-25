@@ -10,8 +10,9 @@ arguments="-warmup_instructions 50000000 -simulation_instructions 100000000 -tra
 
 cd $champsim_dir
 
-for trace in $traces_dir/*
+for trace_path in $traces_dir/*
 do
+trace=${trace_path##*/}
 mkdir -p $results_dir/$trace
 ((bin/asp_sbfp-0threshold$binary $arguments $traces_dir/$trace) > $results_dir/$trace/asp_sbfp-0threshold.txt 2>&1) &
 ((bin/asp_sbfp-disabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/asp_sbfp-disabled.txt 2>&1) &
