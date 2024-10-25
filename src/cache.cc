@@ -892,18 +892,6 @@ void CACHE::handle_fill()
 					// update prefetch stats and reset prefetch bit
 					if (block[set][way].prefetch) {
 						pf_useful++;
-
-						#ifdef SBFP_ENABLE
-						// WAO: Update FDT if free prefetch block gets a hit
-						if(cache_type == IS_STLB)
-						{
-							if(block[set][way].free_distance != 0)
-							{
-								STLB_FDT.update_fdt(block[set][way].free_distance);
-							}
-						}
-						#endif
-
 						block[set][way].prefetch = 0;
 					}
 					block[set][way].used = 1;
@@ -1067,7 +1055,10 @@ void CACHE::handle_fill()
 
 											#ifdef SBFP_ENABLE
 											// WAO: Update FDT for PQ hit
-											STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+											if(PQ.entry[answer.first].free_distance != 0)
+											{
+												STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+											}
 											#endif
 										}
 										else
@@ -1557,10 +1548,6 @@ void CACHE::handle_fill()
 		block[set][way].ip = packet->ip;
 		block[set][way].cpu = packet->cpu;
 		block[set][way].instr_id = packet->instr_id;
-
-		// WAO: Fill free prefetch distance and free bit
-		block[set][way].free_distance = packet->free_distance;
-		block[set][way].free_bit = packet->free_bit;
 
 		DP ( if (warmup_complete[packet->cpu]) {
 				cout << "[" << NAME << "] " << __func__ << " set: " << set << " way: " << way;

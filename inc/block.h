@@ -30,10 +30,6 @@ class BLOCK {
 		// replacement state
 		uint32_t lru;
 
-		// WAO: Added entry for free prefetch distance
-		int8_t free_distance;
-		int8_t free_bit;
-
 		BLOCK() {
 			valid = 0;
 			prefetch = 0;
@@ -55,10 +51,6 @@ class BLOCK {
 			lru = 0;
 
 			stalls=0;
-
-			// WAO: Added entry for free prefetch distance and free_bit
-			free_distance = 0;
-			free_bit = 0;
 		};
 };
 
