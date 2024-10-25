@@ -991,7 +991,7 @@ void CACHE::handle_fill()
 									}
 
 									pair<uint64_t, uint64_t> v2p;
-									if(answer.first == -1){
+									if(answer.first == -1){  // WAO: Demand PTW is initiated here
 										if(iflag){
 											if(fctb_found_pos == -10){
 												v2p = va_to_pa(read_cpu, RQ.entry[index].instr_id, RQ.entry[index].full_addr, RQ.entry[index].address, RQ.entry[index].ip, RQ.entry[index].type, iflag, 0);
@@ -1030,6 +1030,33 @@ void CACHE::handle_fill()
 										if(free_dist_sampler != 0)
 										{
 											STLB_FDT.update_fdt(free_dist_sampler);
+										}
+										#endif
+
+										// WAO: Bring in free prefetches from demand PTW
+										#ifdef SBFP_ENABLE
+										// WAO: Compute base address (cache line aligned)
+										uint64_t offset = current_vpn % 8;  // Each entry is 8B and cache line is 64B
+										uint64_t vpn_base = current_vpn - offset;
+
+										// WAO: Add free VPN translations to Sampler if FDT is not saturated
+										for(int i = 0; i < 8; i++)
+										{
+											if(i != offset)
+											{
+												uint64_t vpn_free = vpn_base + i;
+												int8_t free_distance = i - (int) offset;
+
+												// Check if FDT is beyond threshold
+												if(STLB_FDT.insert_sampler(free_distance))
+												{
+													STLB_sampler.add_entry(vpn_free, free_distance);
+												}
+												else
+												{
+													prefetch_page(RQ.entry[index].ip, RQ.entry[index].full_addr, vpn_free, FILL_L2, 0, 1, 0, free_distance, RQ.entry[index].instr_id, RQ.entry[index].type, iflag, 0, 0, 0);
+												}
+											}
 										}
 										#endif
 									}
