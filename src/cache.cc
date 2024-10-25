@@ -4,9 +4,16 @@
 #include <algorithm>
 #include "ooo_cpu.h"
 
+// WAO: Added sampler and FDT headers
+#include "sampler.h"
+#include "fdt.h"
+
 #define DEBUG_STLB 0
 #define DEBUG 0
 
+// WAO: Added STLB sampler and FDT as extern variables
+extern sampler STLB_sampler;
+extern fdt STLB_FDT; 
 
 void CACHE::print_fctb(){
 	for(int i=0; i<FCTB_SIZE; i++)
@@ -885,6 +892,18 @@ void CACHE::handle_fill()
 					// update prefetch stats and reset prefetch bit
 					if (block[set][way].prefetch) {
 						pf_useful++;
+
+						#ifdef SBFP_ENABLE
+						// WAO: Update FDT if free prefetch block gets a hit
+						if(cache_type == IS_STLB)
+						{
+							if(block[set][way].free_distance != 0)
+							{
+								STLB_FDT.update_fdt(block[set][way].free_distance);
+							}
+						}
+						#endif
+
 						block[set][way].prefetch = 0;
 					}
 					block[set][way].used = 1;
@@ -964,6 +983,11 @@ void CACHE::handle_fill()
 									}
 									else{
 										answer = make_pair(-1,-1);
+
+										#ifdef SBFP_ENABLE
+										// WAO: Check for hit in STLB PQ for data translation
+										answer = check_hit_stlb_pq(RQ.entry[index].address);
+										#endif
 									}
 
 									pair<uint64_t, uint64_t> v2p;
@@ -993,11 +1017,31 @@ void CACHE::handle_fill()
 										}
 										if (iflag == 1)
 											pf_misses_pq++;
+											
+										#ifdef SBFP_ENABLE
+										// WAO: Consider misses in PQ due to data translations
+										if(iflag != 1)
+											pf_misses_pq++;
+
+										// WAO: Added logic to check for hits in Sampler, and update FDT on PQ and STLB miss
+										int8_t free_dist_sampler = STLB_sampler.check_hit(current_vpn);
+
+										// Hit in sampler
+										if(free_dist_sampler != 0)
+										{
+											STLB_FDT.update_fdt(free_dist_sampler);
+										}
+										#endif
 									}
 									else{
 										if(PQ.entry[answer.first].free_bit == 1 && PQ.entry[answer.first].free_distance != 0){
 											rfhits[1]++;
 											free_hits[PQ.entry[answer.first].free_distance + 6 + (PQ.entry[answer.first].free_distance < 0)*1]++;
+
+											#ifdef SBFP_ENABLE
+											// WAO: Update FDT for PQ hit
+											STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+											#endif
 										}
 										else
 											rfhits[0]++;
@@ -1043,6 +1087,14 @@ void CACHE::handle_fill()
 										free_indexes = sorted_free_distances();
 										stlb_prefetcher_operate(RQ.entry[index].address, RQ.entry[index].ip, 0, RQ.entry[index].type, answer.first, warmup_complete[cpu], free_indexes, RQ.entry[index].instr_id, iflag);
 										stlb_prefetcher_cache_fill(RQ.entry[index].address, 0, 0, 0, 0);
+									}
+
+									// WAO: Call prefetcher for non instruction translations
+									else
+									{
+										free_indexes = sorted_free_distances();
+										stlb_prefetcher_operate(RQ.entry[index].address, RQ.entry[index].ip, 0, RQ.entry[index].type, answer.first, warmup_complete[cpu], free_indexes, RQ.entry[index].instr_id, iflag);
+										stlb_prefetcher_cache_fill(RQ.entry[index].address, 0, 0, 0, 0);										
 									}
 								}
 							}
@@ -1478,6 +1530,10 @@ void CACHE::handle_fill()
 		block[set][way].ip = packet->ip;
 		block[set][way].cpu = packet->cpu;
 		block[set][way].instr_id = packet->instr_id;
+
+		// WAO: Fill free prefetch distance and free bit
+		block[set][way].free_distance = packet->free_distance;
+		block[set][way].free_bit = packet->free_bit;
 
 		DP ( if (warmup_complete[packet->cpu]) {
 				cout << "[" << NAME << "] " << __func__ << " set: " << set << " way: " << way;

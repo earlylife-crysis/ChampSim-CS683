@@ -5,6 +5,10 @@
 #include "uncore.h"
 #include <fstream>
 
+// WAO: Added sampler and FDT headers
+#include "sampler.h"
+#include "fdt.h"
+
 uint8_t warmup_complete[NUM_CPUS], 
 	simulation_complete[NUM_CPUS], 
 	all_warmup_complete = 0, 
@@ -24,6 +28,10 @@ uint32_t PAGE_TABLE_LATENCY = 0, SWAP_LATENCY = 0;
 queue <uint64_t > page_queue;
 map <uint64_t, uint64_t> page_table, inverse_table, recent_page, unique_cl[NUM_CPUS];
 uint64_t previous_ppage, num_adjacent_page, num_cl[NUM_CPUS], allocated_pages, num_page[NUM_CPUS], minor_fault[NUM_CPUS], major_fault[NUM_CPUS];
+
+// WAO: Add STLB sampler and FDT
+sampler STLB_sampler = sampler();
+fdt STLB_FDT = fdt();
 
 void record_roi_stats(uint32_t cpu, CACHE *cache)
 {
@@ -1838,6 +1846,14 @@ int main(int argc, char** argv)
 	print_dram_stats();
 	print_branch_stats();
 #endif
+
+	#ifdef SBFP_ENABLE
+	// WAO: Print STLB Sampler and FDT contents
+	cout << "\nSTLB Sampler Contents\n";
+	STLB_sampler.print_contents();
+	cout << "\nSTLB FDT Contents\n";
+	STLB_FDT.print_fdt();
+	#endif
 
 	return 0;
 }
