@@ -1,4 +1,4 @@
-// Added by WrongAnswersOnly
+// Added by WrongAnswersOnly (WAO)
 // Implementation of FDT for SBFP (Agile TLB, ISCA 2021)
 
 #ifndef FDT_H

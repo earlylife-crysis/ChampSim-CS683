@@ -1,4 +1,4 @@
-// Added by WrongAnswersOnly
+// Added by WrongAnswersOnly (WAO)
 // Implementation of Sampler for SBFP (Agile TLB, ISCA 2021)
 
 #ifndef SAMPLER_H

@@ -973,13 +973,13 @@ void CACHE::handle_fill()
 										answer = make_pair(-1,-1);
 
 										#ifdef SBFP_ENABLE
-										// WAO: Check for hit in STLB PQ for data translation
+										// WAO: Check for hit in STLB PQ for data translation (since we now prefetch data translations too)
 										answer = check_hit_stlb_pq(RQ.entry[index].address);
 										#endif
 									}
 
 									pair<uint64_t, uint64_t> v2p;
-									if(answer.first == -1){  // WAO: Demand PTW is initiated here
+									if(answer.first == -1){  // WAO: Demand PTW is initiated here following a PQ miss
 										if(iflag){
 											if(fctb_found_pos == -10){
 												v2p = va_to_pa(read_cpu, RQ.entry[index].instr_id, RQ.entry[index].full_addr, RQ.entry[index].address, RQ.entry[index].ip, RQ.entry[index].type, iflag, 0);
@@ -1011,7 +1011,7 @@ void CACHE::handle_fill()
 										if(iflag != 1)
 											pf_misses_pq++;
 
-										// WAO: Added logic to check for hits in Sampler, and update FDT on PQ and STLB miss
+										// WAO: Check for hits in Sampler on PQ miss
 										int8_t free_dist_sampler = STLB_sampler.check_hit(current_vpn);
 
 										// Hit in sampler
@@ -1107,7 +1107,7 @@ void CACHE::handle_fill()
 										stlb_prefetcher_cache_fill(RQ.entry[index].address, 0, 0, 0, 0);
 									}
 
-									// WAO: Call prefetcher for non instruction translations
+									// WAO: Call prefetcher for STLB data translation miss
 									else
 									{
 										free_indexes = sorted_free_distances();

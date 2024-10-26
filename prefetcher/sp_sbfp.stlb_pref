@@ -25,6 +25,7 @@ void CACHE::stlb_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hi
 
 	prefetch_page(ip, addr, pf_addr, FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
 
+	// WAO: When SBFP is enabled, free prefetches are captured
 	#ifdef SBFP_ENABLE
 	// WAO: Compute base address (cache line aligned)
 	uint64_t offset = pf_addr % 8;  // Each entry is 8B and cache line is 64B
