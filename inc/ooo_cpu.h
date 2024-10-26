@@ -16,9 +16,9 @@ using namespace std;
 #define IDEAL 0
 
 // CORE PROCESSOR
-#define FETCH_WIDTH 6//4
-#define DECODE_WIDTH 6//4
-#define EXEC_WIDTH 6
+#define FETCH_WIDTH 4
+#define DECODE_WIDTH 4
+#define EXEC_WIDTH 4
 #define LQ_WIDTH 2
 #define SQ_WIDTH 2//1
 #define RETIRE_WIDTH 4
