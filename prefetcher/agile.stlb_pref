@@ -12,9 +12,24 @@ extern sampler STLB_sampler;
 extern fdt STLB_FDT;
 
 // FPQs for each base prefetcher
-fpq stp_pq = fpq();
-fpq h2p_pq = fpq();
-fpq masp_pq = fpq();
+fpq stp_fpq = fpq();
+fpq h2p_fpq = fpq();
+fpq masp_fpq = fpq();
+
+// Counters to determine chosen prefetcher
+uint8_t pref_enable = 0;  // 8-bit counter
+uint8_t select_1 = 0;  // 6-bit counter
+uint8_t select_2 = 0;  // 2-bit counter
+
+// Defines for saturation limits of above counters
+#define PREF_ENABLE_MAX 255
+#define SELECT_1_MAX 63
+#define SELECT_2_MAX 3
+
+// Defines for enable thresholds of above counters
+#define PREF_ENABLE_THRESH 128
+#define SELECT_1_THRESH 32
+#define SELECT_2_THRESH 2
 
 // Function prototypes for various prefetchers (and SBFP)
 void stp_operate(uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
@@ -24,11 +39,62 @@ void sbfp_operate(uint64_t, uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*
 
 void CACHE::stlb_prefetcher_initialize() 
 {
-
+	cout << "Agile STLB Prefetcher on CPU " << cpu << endl;
 }
 
 void CACHE::stlb_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
 {
+	// Check for hits in each of the FPQs
+	bool stp_hit = stp_fpq.hit_fpq(addr);
+	bool h2p_hit = h2p_fpq.hit_fpq(addr);
+	bool masp_hit = masp_fpq.hit_fpq(addr);
+
+	// Update counters on the basis of above hits (conditions derived from paper)
+	if(stp_hit || h2p_hit || masp_hit)  // If hit in any FPQ
+	{
+		if(pref_enable != PREF_ENABLE_MAX)
+		{
+			pref_enable++;
+		}
+	}
+	else
+	{
+		if(pref_enable != 0)
+		{
+			pref_enable--;
+		}
+	}
+
+	if((stp_hit && !h2p_hit && !masp_hit) || (masp_hit && !stp_hit && !h2p_hit) || (!h2p_hit && stp_hit && masp_hit))
+	{
+		if(select_1 != 0)
+		{
+			select_1--;
+		}
+	}
+	else if(h2p_hit && !stp_hit && !masp_hit)
+	{
+		if(select_1 != SELECT_1_MAX)
+		{
+			select_1++;
+		}
+	}
+
+	if((stp_hit && !h2p_hit && !masp_hit) || (!masp_hit && stp_hit && h2p_hit))
+	{
+		if(select_2 != SELECT_2_MAX)
+		{
+			select_2++;
+		}
+	}
+	else if((masp_hit && !stp_hit && !h2p_hit) || (!stp_hit && masp_hit && h2p_hit))
+	{
+		if(select_2 != 0)
+		{
+			select_2--;
+		}
+	}
+
 
 }
 
