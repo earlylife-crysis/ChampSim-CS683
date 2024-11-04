@@ -52,6 +52,9 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 
 #define FCTB_SIZE 0
 
+// WAO: Enable/Disable the Agile TLB Prefetcher
+#define AGILE_TLB_PREFETCHER
+
 // CACHE TYPE
 #define IS_ITLB 0
 #define IS_DTLB 1
