@@ -971,11 +971,8 @@ void CACHE::handle_fill()
 									}
 									else{
 										answer = make_pair(-1,-1);
-
-										#ifdef SBFP_ENABLE
 										// WAO: Check for hit in STLB PQ for data translation (since we now prefetch data translations too)
 										answer = check_hit_stlb_pq(RQ.entry[index].address);
-										#endif
 									}
 
 									pair<uint64_t, uint64_t> v2p;
@@ -1005,12 +1002,12 @@ void CACHE::handle_fill()
 										}
 										if (iflag == 1)
 											pf_misses_pq++;
-											
-										#ifdef SBFP_ENABLE
+
 										// WAO: Consider misses in PQ due to data translations
 										if(iflag != 1)
 											pf_misses_pq++;
-
+											
+										#ifdef SBFP_ENABLE
 										// WAO: Check for hits in Sampler on PQ miss
 										int8_t free_dist_sampler = STLB_sampler.check_hit(current_vpn);
 
@@ -1844,7 +1841,7 @@ void CACHE::handle_fill()
 
 
 	int CACHE::prefetch_page(uint64_t ip, uint64_t base_addr, uint64_t pf_addr, int fill_level, int pq_id, int free, int update_free, int free_distance, uint64_t id, int type, int iflag, int lad, int confidence, int irip)
-	{
+	{		
 		int index, debug = 0, flag = 0, fctb_search = -10;
 		uint64_t temp = va_to_pa_prefetch(cpu, base_addr, pf_addr), foo;
 
