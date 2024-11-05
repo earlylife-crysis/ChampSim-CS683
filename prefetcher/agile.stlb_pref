@@ -141,6 +141,7 @@ void CACHE::stlb_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way
 
 void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint64_t misses, uint64_t swap, uint64_t dupli, uint64_t free, uint64_t real, uint64_t * mmu_cache_demand_hits, uint64_t * mmu_cache_prefetch_hits, uint64_t * rfhits, uint64_t * free_hits, uint64_t mr[4][4], uint64_t stlb_misses[2])
 {
+	cout << (uint)pref_enable << " " << (uint)select_1 << " " << (uint)select_2 << endl;
 	cout << endl << "*******************************************" << endl;
 	cout << "CPU " << cpu << " STLB -- L2-TLB Prefetcher final stats" << endl;
 	cout << "*******************************************" << endl;
@@ -179,6 +180,7 @@ void stp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 		if(stp_enable)
 		{
 			ooo_cpu[cpu].STLB.prefetch_page(ip, addr, pf_addr, FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
+			stp_fpq.add_fpq(pf_addr);
 		}
 		else  // Add addresses to FPQ
 		{
@@ -215,6 +217,7 @@ void h2p_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 		if(h2p_enable)
 		{
 			ooo_cpu[cpu].STLB.prefetch_page(ip, addr, pf_addr, FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
+			h2p_fpq.add_fpq(pf_addr);
 		}
 		else  // Add addresses to FPQ
 		{
@@ -274,6 +277,7 @@ void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, u
 			if(masp_enable)
 			{
 				ooo_cpu[cpu].STLB.prefetch_page(ip, addr, pf_addr[i], FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
+				masp_fpq.add_fpq(pf_addr[i]);
 			}
 			else  // Add addresses to FPQ
 			{
@@ -349,6 +353,7 @@ void sbfp_operate(uint32_t cpu, uint64_t pf_addr, bool pf_en, fpq* pref_fpq, uin
 				if(pf_en)  // Add to PQ only if prefetcher is enabled
 				{
 					ooo_cpu[cpu].STLB.prefetch_page(ip, addr, vpn_free, FILL_L2, 0, 1, 0, free_distance, instr_id, type, iflag, 0, 0, 0);
+					pref_fpq->add_fpq(vpn_free);
 				}
 				else
 				{
