@@ -54,12 +54,14 @@ class MASP_entry
 	uint64_t ip;
 	uint64_t prev_vpn;
 	int64_t stride;
+	uint8_t valid;
 
 	MASP_entry()
 	{
 		ip = 0;
 		prev_vpn = 0;
 		stride = 0;
+		valid = 0;
 	}
 };
 
@@ -240,4 +242,80 @@ void masp_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, i
 	}
 
 	// Operate MASP
+	uint64_t current_vpn;
+	current_vpn = addr;
+
+	// Use IP to index into MASP tracker
+	// Find if valid entry corresponding to IP exists
+	int masp_index = MASP_TRACKER_SIZE;
+	for(int i = 0; i < MASP_TRACKER_SIZE; i++)
+	{
+		if(masp_tracker[i].ip == ip && masp_tracker[i].valid == 1)
+		{
+			masp_index = i;
+			break;
+		}
+	}
+
+	// Perform prefetch only if entry exists
+	if(masp_index != MASP_TRACKER_SIZE)
+	{
+		uint64_t pf_addr[2];
+
+		// Compute the two addresses that have to be prefetched
+		pf_addr[0] = current_vpn + masp_tracker[masp_index].stride;
+		pf_addr[1] = current_vpn + (current_vpn - masp_tracker[masp_index].prev_vpn);
+
+		for(int i = 0; i < 2; i++)
+		{
+			// Prefetch to PQ only if MASP is enabled
+			if(masp_enable)
+			{
+				prefetch_page(ip, addr, pf_addr[i], FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
+			}
+			else  // Add addresses to FPQ
+			{
+				masp_fpq.add_fpq(pf_addr[i]);
+			}
+
+			// Perform free prefetches if SBFP is enabled
+			#ifdef SBFP_ENABLE
+			sbfp_operate(pf_addr[i], masp_enable, &masp_fpq);
+			#endif
+		}
+
+		// Update MASP tracker
+		masp_tracker[masp_index].stride = current_vpn - masp_tracker[masp_index].prev_vpn;
+		masp_tracker[masp_index].prev_vpn = current_vpn;
+		return;
+	}
+
+	// If no valid MASP tracker entry found, create one
+	masp_index = MASP_TRACKER_SIZE;
+	for(int i = 0; i < MASP_TRACKER_SIZE; i++)
+	{
+		if(masp_tracker[i].valid == 0)
+		{
+			masp_index = i;
+			break;
+		}
+	}
+
+	// If no empty entry available, perform mod(MASP_TRACKER_SIZE) eviction
+	if(masp_index == MASP_TRACKER_SIZE)
+	{
+		masp_index = ip % MASP_TRACKER_SIZE;
+	}
+
+	// Sanity check
+	if(masp_index == MASP_TRACKER_SIZE)
+	{
+		assert(0);
+	}
+
+	// Initialize tracker values
+	masp_tracker[masp_index].ip = ip;
+	masp_tracker[masp_index].valid = 1;
+	masp_tracker[masp_index].prev_vpn = current_vpn;
+	masp_tracker[masp_index].stride = 0;
 }
