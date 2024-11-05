@@ -31,11 +31,39 @@ uint8_t select_2 = 0;  // 2-bit counter
 #define SELECT_1_THRESH 32
 #define SELECT_2_THRESH 2
 
-// Function prototypes for various prefetchers (and SBFP)
+// Function prototypes for various prefetchers (same arguments as stlb_prefetcher_operate)
 void stp_operate(uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
 void h2p_operate(uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
 void masp_operate(uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
-void sbfp_operate(uint64_t, uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);  // First argument is the VPN of the prefetched block
+
+// Function prototype for SBFP
+// uint64_t -> prefetch address
+// bool -> indicates whether the prefetcher is enabled
+// fpq* -> pointer to the FPQ corresponding to the prefetcher
+void sbfp_operate(uint64_t, bool, fpq*);
+
+// Decision structures for H2P prefetcher
+int64_t h2p_history[2] = {0, 0};  // Entry with index 0 is the more recent entry
+uint64_t prev_addr = 0;
+
+// Structures for MASP
+#define MASP_TRACKER_SIZE 64
+class MASP_entry
+{
+	public:
+	uint64_t ip;
+	uint64_t prev_vpn;
+	int64_t stride;
+
+	MASP_entry()
+	{
+		ip = 0;
+		prev_vpn = 0;
+		stride = 0;
+	}
+};
+
+MASP_entry masp_tracker[MASP_TRACKER_SIZE];
 
 void CACHE::stlb_prefetcher_initialize() 
 {
@@ -95,7 +123,11 @@ void CACHE::stlb_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hi
 		}
 	}
 
-
+	// Request each constituent prefetcher to operate
+	// Decision on whether or not to operate will be taken by the prefetcher
+	h2p_operate(addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
+	masp_operate(addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
+	stp_operate(addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
 }
 
 void CACHE::stlb_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way, uint8_t prefetch, uint64_t evicted_addr)
@@ -120,4 +152,92 @@ void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint
 	cout << "-------------------------------------------" << endl;
 }
 
+void stp_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
+{
+	// Check if STP should be operated
+	bool stp_enable = false;
 
+	if(pref_enable >= PREF_ENABLE_THRESH && select_1 < SELECT_1_THRESH && select_2 >= SELECT_2_THRESH)  // Condition for STP operation
+	{
+		stp_enable = true;
+	}
+
+	// Operate STP
+	uint64_t current_vpn, pf_addr;
+	current_vpn = addr;
+	
+	// Prefetch 4 page translations with offsets (-2, -1, 1, 2)
+	for(int i = 0; i < 4; i++)
+	{
+		pf_addr = current_vpn + i - 2;
+
+		// Prefetch to PQ only if STP is enabled
+		if(stp_enable)
+		{
+			prefetch_page(ip, addr, pf_addr, FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
+		}
+		else  // Add addresses to FPQ
+		{
+			stp_fpq.add_fpq(pf_addr);
+		}
+
+		// Perform free prefetches if SBFP is enabled
+		#ifdef SBFP_ENABLE
+		sbfp_operate(pf_addr, stp_enable, &stp_fpq);
+		#endif
+	}
+}
+
+void h2p_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
+{
+	// Check if H2P should be operated
+	bool h2p_enable = false;
+
+	if(pref_enable >= PREF_ENABLE_THRESH && select_1 >= SELECT_1_THRESH)
+	{
+		h2p_enable = true;
+	}
+
+	// Operate H2P
+	uint64_t current_vpn, pf_addr;
+	current_vpn = addr;
+
+	// Prefetch 2 page translations based on saved history
+	for(int i = 0; i < 2; i++)
+	{
+		pf_addr = current_vpn + h2p_history[i];
+
+		// Prefetch to PQ only if H2P is enabled
+		if(h2p_enable)
+		{
+			prefetch_page(ip, addr, pf_addr, FILL_L2, 0, 0, 0, 0, instr_id, type, iflag, 0, 0, 0);
+		}
+		else  // Add addresses to FPQ
+		{
+			h2p_fpq.add_fpq(pf_addr);
+		}
+
+		// Perform free prefetches if SBFP is enabled
+		#ifdef SBFP_ENABLE
+		sbfp_operate(pf_addr, h2p_enable, &h2p_fpq);
+		#endif
+	}
+
+	// Update history structures
+	h2p_history[1] = h2p_history[0];
+	h2p_history[0] = addr - prev_addr;
+	prev_addr = addr;
+}
+
+void masp_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
+{
+	// Check if MASP should be operated
+	bool masp_enable = false;
+
+	if(pref_enable > PREF_ENABLE_THRESH && select_1 < SELECT_1_THRESH && select_2 < SELECT_2_THRESH)
+	{
+		masp_enable = true;
+	}
+
+	// Operate MASP
+}
