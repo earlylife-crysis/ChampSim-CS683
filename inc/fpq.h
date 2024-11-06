@@ -7,12 +7,12 @@
 #include <cstdint>
 
 // Define FPQ size
-#define FPQ_SIZE 64
+#define FPQ_SIZE 16
 
 class fpq
 {
     private:
-    uint8_t* lru;
+    uint8_t* fifo;
     uint64_t* vpn;
     uint8_t* valid;
 
@@ -22,7 +22,7 @@ class fpq
     void print_fpq();
     fpq()
     {
-        lru = new uint8_t[FPQ_SIZE]();
+        fifo = new uint8_t[FPQ_SIZE]();
         vpn = new uint64_t[FPQ_SIZE]();
         valid = new uint8_t[FPQ_SIZE]();
     }

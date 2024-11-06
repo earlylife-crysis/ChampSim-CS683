@@ -7,58 +7,59 @@
 
 void fpq::add_fpq(uint64_t vpn_insert)
 {
-    // First check if entry already exists
+    // First check if an entry corresponding to the vpn is available
     for(int i = 0; i < FPQ_SIZE; i++)
     {
-        if(valid[i] == 1 && vpn[i] == vpn_insert)
+        if(vpn[i] == vpn_insert && valid[i] == 1)
         {
-            lru[i] = 0;
-            // Update LRU for all other valid entries
+            // Update the fifo values for other valid entries
             for(int j = 0; j < FPQ_SIZE; j++)
             {
-                if(j != i && valid[j] == 1)
+                if(fifo[j] < fifo[i] && valid[j] == 1)
                 {
-                    lru[j]++;
+                    fifo[j]++;
                 }
             }
+            fifo[i] = 0;  // Set fifo to 0 for chosen entry
             return;
         }
     }
 
-    // If entry does not exist, find if an empty entry is available
+    // Check if an empty entry is available
     for(int i = 0; i < FPQ_SIZE; i++)
     {
         if(valid[i] == 0)
         {
-            vpn[i] = vpn_insert;
             valid[i] = 1;
-            lru[i] = 0;
-            // Update LRU for all other valid entries
+            fifo[i] = 0;
+            vpn[i] = vpn_insert;
+
+            // Update fifo values for other valid entries
             for(int j = 0; j < FPQ_SIZE; j++)
             {
-                if(j != i && valid[j] == 1)
+                if(i != j && valid[j] == 1)
                 {
-                    lru[j]++;
+                    fifo[j]++;
                 }
             }
             return;
         }
     }
 
-    // If no empty entry is available, find the LRU entry
+    // If no entry available, evict the FI entry
     for(int i = 0; i < FPQ_SIZE; i++)
     {
-        if(lru[i] == FPQ_SIZE - 1)
+        if(fifo[i] == FPQ_SIZE - 1)
         {
+            fifo[i] = 0;
             vpn[i] = vpn_insert;
-            valid[i] = 1;
-            lru[i] = 0;
-            // Update LRU for all other valid entries
+
+            // Update fifo values for other valid entries
             for(int j = 0; j < FPQ_SIZE; j++)
             {
-                if(j != i && valid[j] == 1)
+                if(i != j)
                 {
-                    lru[j]++;
+                    fifo[j]++;
                 }
             }
             return;
@@ -84,6 +85,6 @@ void fpq::print_fpq()
     // Print the contents of the FPQ (for debug)
     for(int i = 0; i < FPQ_SIZE; i++)
     {
-        std::cout << (uint)valid[i] << " " << (uint)lru[i] << " " << vpn[i] << std::endl;
+        std::cout << (uint)valid[i] << " " << (uint)fifo[i] << " " << vpn[i] << std::endl;
     }
 }
