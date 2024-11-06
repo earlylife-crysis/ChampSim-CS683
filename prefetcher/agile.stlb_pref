@@ -227,6 +227,11 @@ void h2p_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 	uint64_t current_vpn, pf_addr;
 	current_vpn = addr;
 
+	// Update history structures
+	h2p_history[1] = h2p_history[0];
+	h2p_history[0] = addr - prev_addr;
+	prev_addr = addr;
+
 	// Prefetch 2 page translations based on saved history
 	for(int i = 0; i < 2; i++)
 	{
@@ -248,11 +253,6 @@ void h2p_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 		sbfp_operate(cpu, pf_addr, h2p_enable, &h2p_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
 		#endif
 	}
-
-	// Update history structures
-	h2p_history[1] = h2p_history[0];
-	h2p_history[0] = addr - prev_addr;
-	prev_addr = addr;
 }
 
 void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
