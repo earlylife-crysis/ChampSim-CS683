@@ -162,6 +162,13 @@ void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint
 	masp_fpq.print_fpq();
 	cout << "\nH2P FPQ Contents\n";
 	h2p_fpq.print_fpq();
+	cout << "\nMASP Tracker Contents\n";
+	for(int i = 0; i < MASP_TRACKER_SIZE; i++)
+	{
+		cout << (uint) masp_tracker[i].ip << " " << (uint) masp_tracker[i].prev_vpn << " " << (int) masp_tracker[i].stride << " " << (uint) masp_tracker[i].valid << endl;
+	}
+	cout << "\nH2P History Structure Contents\n";
+	cout << (uint) h2p_history[0] << " " << (uint) h2p_history[1] << " " << (uint) prev_addr << endl;
 }
 
 void stp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
@@ -179,8 +186,13 @@ void stp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 	current_vpn = addr;
 	
 	// Prefetch 4 page translations with offsets (-2, -1, 1, 2)
-	for(int i = 0; i < 4; i++)
+	for(int i = 0; i < 5; i++)
 	{
+		if(i == 2)  // Same page as current vpn
+		{
+			continue;
+		}
+
 		pf_addr = current_vpn + i - 2;
 
 		// Prefetch to PQ only if STP is enabled
