@@ -141,7 +141,6 @@ void CACHE::stlb_prefetcher_cache_fill(uint64_t addr, uint32_t set, uint32_t way
 
 void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint64_t misses, uint64_t swap, uint64_t dupli, uint64_t free, uint64_t real, uint64_t * mmu_cache_demand_hits, uint64_t * mmu_cache_prefetch_hits, uint64_t * rfhits, uint64_t * free_hits, uint64_t mr[4][4], uint64_t stlb_misses[2])
 {
-	cout << (uint)pref_enable << " " << (uint)select_1 << " " << (uint)select_2 << endl;
 	cout << endl << "*******************************************" << endl;
 	cout << "CPU " << cpu << " STLB -- L2-TLB Prefetcher final stats" << endl;
 	cout << "*******************************************" << endl;
@@ -155,6 +154,14 @@ void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint
 	cout << "PQ hits: " << hits << endl; 
 	cout << "PQ misses: " << misses << endl;
 	cout << "-------------------------------------------" << endl;
+	cout << "Counter Values\n";
+	cout << (uint)pref_enable << " " << (uint)select_1 << " " << (uint)select_2 << endl;
+	cout << "\nSTP FPQ Contents\n";
+	stp_fpq.print_fpq();
+	cout << "\nMASP FPQ Contents\n";
+	masp_fpq.print_fpq();
+	cout << "\nH2P FPQ Contents\n";
+	h2p_fpq.print_fpq();
 }
 
 void stp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
@@ -338,7 +345,7 @@ void sbfp_operate(uint32_t cpu, uint64_t pf_addr, bool pf_en, fpq* pref_fpq, uin
 		if(i != offset)
 		{
 			uint64_t vpn_free = vpn_base + i;
-			int8_t free_distance = i = (int) offset;
+			int8_t free_distance = i - (int) offset;
 
 			// Check FDT and make decision
 			if(STLB_FDT.insert_sampler(free_distance))
