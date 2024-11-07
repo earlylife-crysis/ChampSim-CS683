@@ -347,7 +347,10 @@ void CACHE::stlb_prefetcher_initialize(){
 
 void CACHE::stlb_prefetcher_operate(uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag){
 	if(!iflag)
-		assert(0);
+	{
+		//assert(0);
+		return;
+	}
 
 	s_timer++; 
 
