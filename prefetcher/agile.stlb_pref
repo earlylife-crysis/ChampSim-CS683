@@ -260,7 +260,7 @@ void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, u
 	// Check if MASP should be operated
 	bool masp_enable = false;
 
-	if(pref_enable > PREF_ENABLE_THRESH && select_1 < SELECT_1_THRESH && select_2 < SELECT_2_THRESH)
+	if(pref_enable >= PREF_ENABLE_THRESH && select_1 < SELECT_1_THRESH && select_2 < SELECT_2_THRESH)
 	{
 		masp_enable = true;
 	}

@@ -1049,17 +1049,17 @@ void CACHE::handle_fill()
 										if(PQ.entry[answer.first].free_bit == 1 && PQ.entry[answer.first].free_distance != 0){
 											rfhits[1]++;
 											free_hits[PQ.entry[answer.first].free_distance + 6 + (PQ.entry[answer.first].free_distance < 0)*1]++;
-
-											#ifdef SBFP_ENABLE
-											// WAO: Update FDT for PQ hit
-											if(PQ.entry[answer.first].free_distance != 0)
-											{
-												STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
-											}
-											#endif
 										}
 										else
 											rfhits[0]++;
+
+										#ifdef SBFP_ENABLE
+										// WAO: Update FDT for PQ hit
+										if(PQ.entry[answer.first].free_distance != 0)
+										{
+											STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+										}
+										#endif
 
 										if (warmup_complete[cpu]){
 											uint64_t num_cycles;
