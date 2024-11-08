@@ -3,7 +3,7 @@
 # Bash script to compile multiple binaries
 
 # Unique identifier for binary
-id="-noFP"
+id="-morrigan_eval"
 
 champsim_dir=".."
 cd $champsim_dir

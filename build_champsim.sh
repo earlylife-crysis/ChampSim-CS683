@@ -8,9 +8,9 @@
 
 # ChampSim configuration
 BRANCH="hashed_perceptron"          # branch/*.bpred
-L1I_PREFETCHER="no"   # prefetcher/*.l1i_pref
+L1I_PREFETCHER="next_line"   # prefetcher/*.l1i_pref
 L1D_PREFETCHER="next_line"   # prefetcher/*.l1d_pref
-L2C_PREFETCHER="ip_stride"   # prefetcher/*.l2c_pref
+L2C_PREFETCHER="spp_dev"   # prefetcher/*.l2c_pref
 LLC_PREFETCHER="no"   # prefetcher/*.llc_pref
 LLC_REPLACEMENT="lru"  # replacement/*.llc_repl
 NUM_CORE=1         # tested up to 8-core system
