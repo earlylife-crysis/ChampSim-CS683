@@ -50,24 +50,33 @@ uint64_t prev_addr = 0;
 
 // Structures for MASP
 #define MASP_TRACKER_SIZE 64
-class MASP_entry
-{
-	public:
-	uint64_t ip;
-	uint64_t prev_vpn;
-	int64_t stride;
-	uint8_t valid;
+#define MASP_ASSOC 4
 
-	MASP_entry()
+class MASP_set
+{
+	private:
+	uint64_t* ip_tag;
+	uint64_t* prev_vpn;
+	int64_t* stride;
+	uint8_t* valid;
+	uint8_t* lru;
+
+	public:
+	bool check_hit(uint64_t, int64_t*, uint64_t*);  // Arguments are IP tag and pointers to stride and prev_vpn variables (for return)
+	void update_entry(uint64_t, int64_t, uint64_t);  // Arguments are IP tag, stride and prev_vpn
+	void insert_entry(uint64_t, uint64_t);  // Arguments are IP tag and prev_vpn
+	void print_set();
+	MASP_set()
 	{
-		ip = 0;
-		prev_vpn = 0;
-		stride = 0;
-		valid = 0;
+		ip_tag = new uint64_t[MASP_ASSOC]();
+		prev_vpn = new uint64_t[MASP_ASSOC]();
+		stride = new int64_t[MASP_ASSOC]();
+		valid = new uint8_t[MASP_ASSOC]();
+		lru = new uint8_t[MASP_ASSOC]();
 	}
 };
 
-MASP_entry masp_tracker[MASP_TRACKER_SIZE];
+MASP_set masp_tracker[MASP_TRACKER_SIZE/MASP_ASSOC];
 
 void CACHE::stlb_prefetcher_initialize() 
 {
@@ -163,9 +172,10 @@ void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint
 	cout << "\nH2P FPQ Contents\n";
 	h2p_fpq.print_fpq();
 	cout << "\nMASP Tracker Contents\n";
-	for(int i = 0; i < MASP_TRACKER_SIZE; i++)
+	for(int i = 0; i < MASP_TRACKER_SIZE/MASP_ASSOC; i++)
 	{
-		cout << (uint) masp_tracker[i].ip << " " << (uint) masp_tracker[i].prev_vpn << " " << (int) masp_tracker[i].stride << " " << (uint) masp_tracker[i].valid << endl;
+		cout << "\nContents of Set " << i << endl;
+		masp_tracker[i].print_set();
 	}
 	cout << "\nH2P History Structure Contents\n";
 	cout << (uint) h2p_history[0] << " " << (uint) h2p_history[1] << " " << (uint) prev_addr << endl;
@@ -269,26 +279,23 @@ void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, u
 	uint64_t current_vpn;
 	current_vpn = addr;
 
-	// Use IP to index into MASP tracker
-	// Find if valid entry corresponding to IP exists
-	int masp_index = MASP_TRACKER_SIZE;
-	for(int i = 0; i < MASP_TRACKER_SIZE; i++)
-	{
-		if(masp_tracker[i].ip == ip && masp_tracker[i].valid == 1)
-		{
-			masp_index = i;
-			break;
-		}
-	}
+	// Compute MASP tracker index and tag
+	uint masp_index = ip % (MASP_TRACKER_SIZE/MASP_ASSOC);
+	uint64_t masp_tag = ip / (MASP_TRACKER_SIZE/MASP_ASSOC);
+
+	// Create variables for stride and previous VPN, and check for hit
+	int64_t stride;
+	uint64_t prev_vpn;
+	bool tracker_hit = masp_tracker[masp_index].check_hit(masp_tag, &stride, &prev_vpn);
 
 	// Perform prefetch only if entry exists
-	if(masp_index != MASP_TRACKER_SIZE)
+	if(tracker_hit)
 	{
 		uint64_t pf_addr[2];
 
 		// Compute the two addresses that have to be prefetched
-		pf_addr[0] = current_vpn + masp_tracker[masp_index].stride;
-		pf_addr[1] = current_vpn + (current_vpn - masp_tracker[masp_index].prev_vpn);
+		pf_addr[0] = current_vpn + stride;
+		pf_addr[1] = current_vpn + (current_vpn - prev_vpn);
 
 		for(int i = 0; i < 2; i++)
 		{
@@ -310,39 +317,14 @@ void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, u
 		}
 
 		// Update MASP tracker
-		masp_tracker[masp_index].stride = current_vpn - masp_tracker[masp_index].prev_vpn;
-		masp_tracker[masp_index].prev_vpn = current_vpn;
+		stride = current_vpn - prev_vpn;
+		prev_vpn = current_vpn;
+		masp_tracker[masp_index].update_entry(masp_tag, stride, prev_vpn);
 		return;
 	}
 
-	// If no valid MASP tracker entry found, create one
-	masp_index = MASP_TRACKER_SIZE;
-	for(int i = 0; i < MASP_TRACKER_SIZE; i++)
-	{
-		if(masp_tracker[i].valid == 0)
-		{
-			masp_index = i;
-			break;
-		}
-	}
-
-	// If no empty entry available, perform mod(MASP_TRACKER_SIZE) eviction
-	if(masp_index == MASP_TRACKER_SIZE)
-	{
-		masp_index = ip % MASP_TRACKER_SIZE;
-	}
-
-	// Sanity check
-	if(masp_index == MASP_TRACKER_SIZE)
-	{
-		assert(0);
-	}
-
-	// Initialize tracker values
-	masp_tracker[masp_index].ip = ip;
-	masp_tracker[masp_index].valid = 1;
-	masp_tracker[masp_index].prev_vpn = current_vpn;
-	masp_tracker[masp_index].stride = 0;
+	// No hit in MASP tracker, so create new entry
+	masp_tracker[masp_index].insert_entry(masp_tag, current_vpn);
 }
 
 void sbfp_operate(uint32_t cpu, uint64_t pf_addr, bool pf_en, fpq* pref_fpq, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
@@ -380,5 +362,102 @@ void sbfp_operate(uint32_t cpu, uint64_t pf_addr, bool pf_en, fpq* pref_fpq, uin
 				}
 			}
 		}
+	}
+}
+
+bool MASP_set::check_hit(uint64_t ip_tag_check, int64_t* stride_ret, uint64_t* prev_vpn_ret)
+{
+	for(int i = 0; i < MASP_ASSOC; i++)
+	{
+		if(ip_tag[i] == ip_tag_check && valid[i] == 1)
+		{
+			*stride_ret = stride[i];
+			*prev_vpn_ret = prev_vpn[i];
+
+			// Update lru values
+			for(int j = 0; j < MASP_ASSOC; j++)
+			{
+				if(lru[j] < lru[i] && valid[j] == 1)
+				{
+					lru[j]++;
+				}
+			}
+			lru[i] = 0;
+			return true;
+		}
+	}
+	return false;
+}
+
+void MASP_set::update_entry(uint64_t ip_tag_update, int64_t stride_update, uint64_t prev_vpn_update)
+{
+	for(int i = 0; i < MASP_ASSOC; i++)
+	{
+		if(ip_tag[i] == ip_tag_update && valid[i] == 1)
+		{
+			stride[i] = stride_update;
+			prev_vpn[i] = prev_vpn_update;
+			return;
+		}
+	}
+	
+	// Should not reach here
+	assert(0);
+}
+
+void MASP_set::insert_entry(uint64_t ip_tag_insert, uint64_t prev_vpn_insert)
+{
+	// Check if empty entry is available
+	int entry = MASP_ASSOC;
+	for(int i = 0; i < MASP_ASSOC; i++)
+	{
+		if(valid[i] == 0)
+		{
+			entry = i;
+			break;
+		}
+	}
+
+	// If no empty entry, evict LRU
+	if(entry == MASP_ASSOC)
+	{
+		for(int i = 0; i < MASP_ASSOC; i++)
+		{
+			if(lru[i] == MASP_ASSOC - 1)
+			{
+				entry = i;
+				break;
+			}
+		}
+	}
+
+	// Impossible condition
+	if(entry == MASP_ASSOC)
+	{
+		assert(0);
+	}
+
+	// Enter new values into the entry
+	ip_tag[entry] = ip_tag_insert;
+	prev_vpn[entry] = prev_vpn_insert;
+	stride[entry] = 0;
+	valid[entry] = 1;
+
+	// Update lru values
+	for(int i = 0; i < MASP_ASSOC; i++)
+	{
+		if(i != entry && valid[i] == 1)
+		{
+			lru[i]++;
+		}
+	}
+	lru[entry] = 0;
+}
+
+void MASP_set::print_set()
+{
+	for(int i = 0; i < MASP_ASSOC; i++)
+	{
+		cout << (uint) ip_tag[i] << " " << (uint) prev_vpn[i] << " " << (int) stride[i] << " " << (uint) valid[i] << " " << (uint) lru[i] << endl;
 	}
 }
