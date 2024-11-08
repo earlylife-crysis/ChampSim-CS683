@@ -26,11 +26,11 @@ mkdir -p $results_dir/$trace
 # ((bin/no-0threshold$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-0threshold.txt 2>&1) &
 # ((bin/no-disabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-disabled.txt 2>&1) &
 # ((bin/no-enabled$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no_sbfp-enabled.txt 2>&1) &
-# ((bin/asp_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/asp_istlb.txt 2>&1) &
-# ((bin/dp_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/dp_istlb.txt 2>&1) &
-# ((bin/sp_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp_istlb.txt 2>&1) &
-# ((bin/markov_sota_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/markov_sota_istlb.txt 2>&1) &
-# ((bin/morriganPT-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/morriganPT.txt 2>&1) &
+((bin/asp_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/asp_istlb.txt 2>&1) &
+((bin/dp_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/dp_istlb.txt 2>&1) &
+((bin/sp_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp_istlb.txt 2>&1) &
+((bin/markov_sota_istlb-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/markov_sota_istlb.txt 2>&1) &
+((bin/morriganPT-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/morriganPT.txt 2>&1) &
 ((bin/no-morrigan_eval$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no.txt 2>&1) &
 wait
 done

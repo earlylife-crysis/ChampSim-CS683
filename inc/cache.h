@@ -22,7 +22,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LA_DEPTH 0
 
 // Replacement Policy for Markov's prediction table --> [ 0:LRU, 1:LFU, 2:RANDOM, 3:... ]
-#define RP_MP 1
+#define RP_MP 0
 
 // Number of prediction table entries you randomly select from for eviction in LFU replacement policy for the Markov instruction TLB prefetcher
 #define LLIMIT 5
@@ -34,7 +34,7 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define SUCCESSORS 2
 
 // Replacement Policy for the successors of Markov's prediction table --> [ 0:FIFO, 1:RANDOM, 2:CUSTOM, 3:... ]
-#define RP_SUC_MP 2
+#define RP_SUC_MP 0
 
 // Number of STLB instruction misses to reset frequency field of Markov Prefetcher used for the LFU policy
 #define RESET_FREQ 5000
@@ -83,8 +83,8 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define DTLB_LATENCY 1
 
 // SECOND LEVEL TLB
-#define STLB_SET 128
-#define STLB_WAY 12
+#define STLB_SET 256
+#define STLB_WAY 6
 #define STLB_RQ_SIZE 32
 #define STLB_WQ_SIZE 32
 #define STLB_PQ_SIZE 64
