@@ -3,10 +3,10 @@
 # Bash script to run multiple benchmarks with different binaries
 
 champsim_dir=".."
-traces_dir="/home/yashas/benchmarks/qmm"
-results_dir="logs/morrigan_eval"
-binary="-hashed_perceptron-next_line-next_line-spp_dev-lru-1core"
-arguments="-warmup_instructions 50000000 -simulation_instructions 100000000 -traces"
+traces_dir="/home/yashas/benchmarks/spec17"
+results_dir="logs/agile_eval/spec17"
+binary="-hashed_perceptron-no-next_line-ip_stride-lru-1core"
+arguments="-warmup_instructions 250000000 -simulation_instructions 1000000000 -traces"
 
 cd $champsim_dir
 

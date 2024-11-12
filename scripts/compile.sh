@@ -3,7 +3,7 @@
 # Bash script to compile multiple binaries
 
 # Unique identifier for binary
-id="-SBFP"
+id="-NaiveFP"
 
 champsim_dir=".."
 cd $champsim_dir
