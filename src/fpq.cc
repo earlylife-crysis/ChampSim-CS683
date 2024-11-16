@@ -65,6 +65,9 @@ void fpq::add_fpq(uint64_t vpn_insert)
             return;
         }
     }
+
+    // Should never reach here
+    assert(0);
 }
 
 bool fpq::hit_fpq(uint64_t vpn_check)

@@ -997,12 +997,8 @@ void CACHE::handle_fill()
 											}
 										}
 										else{
-											// WAO: Have same translation procedure for instruction and data translations
-											pa = va_to_pa_prefetch(read_cpu, RQ.entry[index].full_addr, RQ.entry[index].address);
-											if(pa == 0){
-												v2p = va_to_pa(read_cpu, RQ.entry[index].instr_id, RQ.entry[index].full_addr, RQ.entry[index].address, RQ.entry[index].ip, RQ.entry[index].type, iflag, 0);
-												pa = v2p.first;
-											}
+											v2p = va_to_pa(read_cpu, RQ.entry[index].instr_id, RQ.entry[index].full_addr, RQ.entry[index].address, RQ.entry[index].ip, RQ.entry[index].type, iflag, 0);
+											pa = v2p.first;
 										}
 										if (iflag == 1)
 											pf_misses_pq++;
@@ -1849,7 +1845,7 @@ void CACHE::handle_fill()
 		int index, debug = 0, flag = 0, fctb_search = -10;
 		uint64_t temp = va_to_pa_prefetch(cpu, base_addr, pf_addr), foo;
 
-		if(!free)
+		if(!free && iflag == 1)  // WAO: Change to ensure FCTB is searched only for iSTLB requests
 			fctb_search = search_fctb(pf_addr);
 
 		if(pq_id == 0){
