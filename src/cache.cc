@@ -998,7 +998,7 @@ void CACHE::handle_fill()
 										}
 										else{
 											v2p = va_to_pa(read_cpu, RQ.entry[index].instr_id, RQ.entry[index].full_addr, RQ.entry[index].address, RQ.entry[index].ip, RQ.entry[index].type, iflag, 0);
-											pa  = v2p.first;
+											pa = v2p.first;
 										}
 										if (iflag == 1)
 											pf_misses_pq++;
@@ -1105,7 +1105,7 @@ void CACHE::handle_fill()
 									}
 
 									// WAO: Call prefetcher for STLB data translation miss
-									else
+									if(iflag != 1)
 									{
 										free_indexes = sorted_free_distances();
 										stlb_prefetcher_operate(RQ.entry[index].address, RQ.entry[index].ip, 0, RQ.entry[index].type, answer.first, warmup_complete[cpu], free_indexes, RQ.entry[index].instr_id, iflag);
@@ -1845,7 +1845,7 @@ void CACHE::handle_fill()
 		int index, debug = 0, flag = 0, fctb_search = -10;
 		uint64_t temp = va_to_pa_prefetch(cpu, base_addr, pf_addr), foo;
 
-		if(!free)
+		if(!free && iflag == 1)  // WAO: Change to ensure FCTB is searched only for iSTLB requests
 			fctb_search = search_fctb(pf_addr);
 
 		if(pq_id == 0){
@@ -1895,15 +1895,19 @@ void CACHE::handle_fill()
 			pf_packet.conf = confidence;
 			pf_packet.irip = irip;
 
-			if(fctb_search == -10){
-				fctb_misses++;
-				pf_packet.event_cycle = current_core_cycle[cpu];
-				pf_packet.free_bit = free;
-			}
-			else{
-				fctb_hits++;
-				pf_packet.event_cycle = fctb[fctb_search][2];
-				pf_packet.free_bit = 1;
+			// WAO: Change to ensure FCTB is searched only for iSTLB requests
+			if(iflag == 1)
+			{
+				if(fctb_search == -10){
+					fctb_misses++;
+					pf_packet.event_cycle = current_core_cycle[cpu];
+					pf_packet.free_bit = free;
+				}
+				else{
+					fctb_hits++;
+					pf_packet.event_cycle = fctb[fctb_search][2];
+					pf_packet.free_bit = 1;
+				}
 			}
 
 			if(free){
@@ -1912,7 +1916,7 @@ void CACHE::handle_fill()
 				pf_packet.stall_cycles = 100;
 			}
 			else{
-				if(fctb_search != -10){
+				if(fctb_search != -10 && iflag == 1){  // WAO: Change to ensure FCTB is searched only for iSTLB requests
 					pf_free++;
 					pf_packet.stall_cycles = fctb[fctb_search][3];
 				}
@@ -1920,12 +1924,16 @@ void CACHE::handle_fill()
 					pf_real++;
 					int stall_cycles = mmu_cache_prefetch_search(cpu, pf_addr, 0, id, ip, type, iflag);
 					pf_packet.stall_cycles = stall_cycles;
-
-					int victim_entry = fctb_replacement_policy();
-					fctb[victim_entry][0] = pf_addr;
-					fctb[victim_entry][1] = (pf_addr & 0x07);
-					fctb[victim_entry][2] = current_core_cycle[cpu];
-					fctb[victim_entry][3] = stall_cycles;
+					
+					//WAO: Change to ensure FCTB is updated only for iSTLB requests
+					if(iflag == 1)
+					{
+						int victim_entry = fctb_replacement_policy();
+						fctb[victim_entry][0] = pf_addr;
+						fctb[victim_entry][1] = (pf_addr & 0x07);
+						fctb[victim_entry][2] = current_core_cycle[cpu];
+						fctb[victim_entry][3] = stall_cycles;
+					}
 				}
 			}
 

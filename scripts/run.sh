@@ -4,7 +4,7 @@
 
 champsim_dir=".."
 traces_dir="/home/yashas/benchmarks/spec17"
-results_dir="logs/agile_eval/spec17"
+results_dir="logs/agile_eval/spec17chosen"
 binary="-hashed_perceptron-no-next_line-ip_stride-lru-1core"
 arguments="-warmup_instructions 250000000 -simulation_instructions 1000000000 -traces"
 
@@ -19,13 +19,12 @@ mkdir -p $results_dir/$trace
 ((bin/asp_sbfp-SBFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/asp-SBFP.txt 2>&1) &
 ((bin/dp_sbfp-NaiveFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/dp-NaiveFP.txt 2>&1) &
 ((bin/dp_sbfp-NoFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/dp-NoFP.txt 2>&1) &
-wait
 ((bin/dp_sbfp-SBFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/dp-SBFP.txt 2>&1) &
 ((bin/sp_sbfp-NaiveFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp-NaiveFP.txt 2>&1) &
 ((bin/sp_sbfp-NoFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp-NoFP.txt 2>&1) &
+wait
 ((bin/sp_sbfp-SBFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/sp-SBFP.txt 2>&1) &
 ((bin/no-NaiveFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no-NaiveFP.txt 2>&1) &
-wait
 ((bin/no-NoFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no-NoFP.txt 2>&1) &
 ((bin/no-SBFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/no-SBFP.txt 2>&1) &
 ((bin/agile-NaiveFP$binary $arguments $traces_dir/$trace) > $results_dir/$trace/agile-NaiveFP.txt 2>&1) &
