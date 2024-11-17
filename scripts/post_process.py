@@ -3,7 +3,7 @@
 import csv
 import os
 
-logs_path = "../logs/QMM"
+logs_path = "../logs/agile_eval/spec17"
 
 os.chdir(logs_path)
 
@@ -20,41 +20,63 @@ for trace in os.listdir():
     # Create list to hold stats
     append_list = []
 
-    append_list.append(trace.split(".")[0])
+    append_list.append(trace.split(".")[1])
 
     # Iterate through each log
     for log in sorted(os.listdir()):
         logfile = open(log, 'r')
 
         if counter == 0:
-            if log == "asp_sbfp-0threshold.txt":
-                csv_header.append("ASP AllFP")
-            if log == "asp_sbfp-disabled.txt":
+            if log == "asp-NaiveFP.txt":
+                csv_header.append("ASP NaiveFP")
+            if log == "asp-NoFP.txt":
                 csv_header.append("ASP NoFP")
-            if log == "asp_sbfp-enabled.txt":
+            if log == "asp-SBFP.txt":
                 csv_header.append("ASP SBFP")
-            if log == "dp_sbfp-0threshold.txt":
-                csv_header.append("DP AllFP")
-            if log == "dp_sbfp-disabled.txt":
+            if log == "agile-NaiveFP.txt":
+                csv_header.append("Agile NaiveFP")
+            if log == "agile-NoFP.txt":
+                csv_header.append("Agile NoFP")
+            if log == "agile-SBFP.txt":
+                csv_header.append("Agile SBFP")
+            if log == "dp-NaiveFP.txt":
+                csv_header.append("DP NaiveFP")
+            if log == "dp-NoFP.txt":
                 csv_header.append("DP NoFP")
-            if log == "dp_sbfp-enabled.txt":
+            if log == "dp-SBFP.txt":
                 csv_header.append("DP SBFP")
-            if log == "no_sbfp-0threshold.txt":
-                csv_header.append("No AllFP")
-            if log == "no_sbfp-disabled.txt":
+            if log == "no-NaiveFP.txt":
+                csv_header.append("No NaiveFP")
+            if log == "no-NoFP.txt":
                 csv_header.append("No NoFP")
-            if log == "no_sbfp-enabled.txt":
+            if log == "no-SBFP.txt":
                 csv_header.append("No SBFP")
-            if log == "sp_sbfp-0threshold.txt":
-                csv_header.append("SP AllFP")
-            if log == "sp_sbfp-disabled.txt":
+            if log == "sp-NaiveFP.txt":
+                csv_header.append("SP NaiveFP")
+            if log == "sp-NoFP.txt":
                 csv_header.append("SP NoFP")
-            if log == "sp_sbfp-enabled.txt":
+            if log == "sp-SBFP.txt":
                 csv_header.append("SP SBFP")
 
+            # # Conditional Statements for Morrigan eval
+            # if log == "asp_istlb.txt":
+            #     csv_header.append("ASP")
+            # if log == "dp_istlb.txt":
+            #     csv_header.append("DP")
+            # if log == "no.txt":
+            #     csv_header.append("No")
+            # if log == "sp_istlb.txt":
+            #     csv_header.append("SP")
+            # if log == "markov_sota_istlb.txt":
+            #     csv_header.append("MP")
+            # if log == "morriganPT.txt":
+            #     csv_header.append("Morrigan")
+
         for line in logfile:
-            if "STLB LOAD      ACCESS:" in line:
-                append_list.append(line.split()[7])
+            # if "STLB LOAD      ACCESS:" in line:
+            #     append_list.append(line.split()[7])
+            if "CPU 0 cumulative IPC:" in line:
+                append_list.append(line.split()[4])
 
     os.chdir("..")
     counter = counter + 1
