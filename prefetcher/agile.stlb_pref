@@ -44,9 +44,25 @@ void masp_operate(uint32_t, uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*
 // fpq* -> pointer to the FPQ corresponding to the prefetcher
 void sbfp_operate(uint32_t, uint64_t, bool, fpq*, uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
 
+// Function prototype for per-prefetcher SBFP
+void sbfp_operate_sep(uint32_t, uint64_t, bool, fpq*, uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
+
 // Decision structures for H2P prefetcher
 int64_t h2p_history[2] = {0, 0};  // Entry with index 0 is the more recent entry
 uint64_t prev_addr = 0;
+
+// Boolean variables to indicate whether prefetcher is enabled
+bool stp_enable = false;
+bool h2p_enable = false;
+bool masp_enable = false;
+
+// Seperate sampler and FDT for each prefetcher
+sampler stp_sampler = sampler();
+fdt stp_fdt = fdt();
+sampler h2p_sampler = sampler();
+fdt h2p_fdt = fdt();
+sampler masp_sampler = sampler();
+fdt masp_fdt = fdt();
 
 // Structures for MASP
 #define MASP_TRACKER_SIZE 64
@@ -184,7 +200,7 @@ void CACHE::stlb_prefetcher_final_stats(uint64_t prefetches, uint64_t hits, uint
 void stp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
 {
 	// Check if STP should be operated
-	bool stp_enable = false;
+	stp_enable = false;
 
 	if(pref_enable >= PREF_ENABLE_THRESH && select_1 < SELECT_1_THRESH && select_2 >= SELECT_2_THRESH)  // Condition for STP operation
 	{
@@ -220,13 +236,17 @@ void stp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 		#ifdef SBFP_ENABLE
 		sbfp_operate(cpu, pf_addr, stp_enable, &stp_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
 		#endif
+
+		#ifdef AGILE_SEP_SAMPLER
+		sbfp_operate_sep(cpu, pf_addr, stp_enable, &stp_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
+		#endif
 	}
 }
 
 void h2p_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
 {
 	// Check if H2P should be operated
-	bool h2p_enable = false;
+	h2p_enable = false;
 
 	if(pref_enable >= PREF_ENABLE_THRESH && select_1 >= SELECT_1_THRESH)
 	{
@@ -262,13 +282,17 @@ void h2p_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, ui
 		#ifdef SBFP_ENABLE
 		sbfp_operate(cpu, pf_addr, h2p_enable, &h2p_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
 		#endif
+
+		#ifdef AGILE_SEP_SAMPLER
+		sbfp_operate_sep(cpu, pf_addr, stp_enable, &stp_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
+		#endif
 	}
 }
 
 void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
 {
 	// Check if MASP should be operated
-	bool masp_enable = false;
+	masp_enable = false;
 
 	if(pref_enable >= PREF_ENABLE_THRESH && select_1 < SELECT_1_THRESH && select_2 < SELECT_2_THRESH)
 	{
@@ -314,6 +338,10 @@ void masp_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hit, u
 			#ifdef SBFP_ENABLE
 			sbfp_operate(cpu, pf_addr[i], masp_enable, &masp_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
 			#endif
+
+			#ifdef AGILE_SEP_SAMPLER
+			sbfp_operate_sep(cpu, pf_addr[i], stp_enable, &stp_fpq, addr, ip, cache_hit, type, answer, warmup, free_indexes, instr_id, iflag);
+			#endif
 		}
 
 		// Update MASP tracker
@@ -348,6 +376,65 @@ void sbfp_operate(uint32_t cpu, uint64_t pf_addr, bool pf_en, fpq* pref_fpq, uin
 				{
 					STLB_sampler.add_entry(vpn_free, free_distance);
 				}
+			}
+			else
+			{
+				if(pf_en)  // Add to PQ only if prefetcher is enabled
+				{
+					ooo_cpu[cpu].STLB.prefetch_page(ip, addr, vpn_free, FILL_L2, 0, 1, 0, free_distance, instr_id, type, iflag, 0, 0, 0);
+					pref_fpq->add_fpq(vpn_free);
+				}
+				else
+				{
+					pref_fpq->add_fpq(vpn_free);
+				}
+			}
+		}
+	}
+}
+
+void sbfp_operate_sep(uint32_t cpu, uint64_t pf_addr, bool pf_en, fpq* pref_fpq, uint64_t addr, uint64_t ip, uint8_t cache_hit, uint8_t type, int answer, int warmup, int * free_indexes, uint64_t instr_id, int iflag)
+{
+	// Choose appropriate sampler and FDT
+	sampler* sampler_ptr;
+	fdt* fdt_ptr;
+
+	if(stp_enable)
+	{
+		sampler_ptr = &stp_sampler;
+		fdt_ptr = &stp_fdt;
+	}
+	else if(h2p_enable)
+	{
+		sampler_ptr = &h2p_sampler;
+		fdt_ptr = &h2p_fdt;
+	}
+	else if(masp_enable)
+	{
+		sampler_ptr = &masp_sampler;
+		fdt_ptr = &masp_fdt;
+	}
+	else
+	{
+		return;
+	}
+	
+	// Compute base address (cache line aligned)
+	uint64_t offset = pf_addr % 8;  // Each PTE entry is 8B and cache line is 64B
+	uint64_t vpn_base = pf_addr - offset;
+
+	// Check FDT and add free translations to Sampler or PQ
+	for(int i = 0; i < 8; i++)
+	{
+		if(i != offset)
+		{
+			uint64_t vpn_free = vpn_base + i;
+			int8_t free_distance = i - (int) offset;
+
+			// Check FDT and make decision
+			if(fdt_ptr->insert_sampler(free_distance))
+			{
+				sampler_ptr->add_entry(vpn_free, free_distance);
 			}
 			else
 			{

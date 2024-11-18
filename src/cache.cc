@@ -11,9 +11,26 @@
 #define DEBUG_STLB 0
 #define DEBUG 0
 
+#ifdef SBFP_ENABLE
 // WAO: Added STLB sampler and FDT as extern variables
 extern sampler STLB_sampler;
-extern fdt STLB_FDT; 
+extern fdt STLB_FDT;
+#endif 
+
+#ifdef AGILE_SEP_SAMPLER
+// WAO: Added individual STLB samplers and FDTs as extern variables
+extern sampler stp_sampler;
+extern fdt stp_fdt;
+extern sampler h2p_sampler;
+extern fdt h2p_fdt;
+extern sampler masp_sampler;
+extern fdt masp_fdt;
+
+// WAO: Boolean variables to indicate whether prefetcher is enabled
+extern bool stp_enable;
+extern bool h2p_enable;
+extern bool masp_enable;
+#endif
 
 void CACHE::print_fctb(){
 	for(int i=0; i<FCTB_SIZE; i++)
@@ -1018,8 +1035,48 @@ void CACHE::handle_fill()
 										}
 										#endif
 
+										#ifdef AGILE_SEP_SAMPLER
+										// WAO: Determine appropraite sampler and FDT
+										fdt* fdt_ptr;
+										sampler* sampler_ptr;
+										if(stp_enable)
+										{
+											fdt_ptr = &stp_fdt;
+											sampler_ptr = &stp_sampler;
+										}
+										else if(h2p_enable)
+										{
+											fdt_ptr = &h2p_fdt;
+											sampler_ptr = &h2p_sampler;
+										}
+										else if(masp_enable)
+										{
+											fdt_ptr = &masp_fdt;
+											sampler_ptr = &masp_sampler;
+										}
+										else
+										{
+											fdt_ptr = nullptr;
+											sampler_ptr = nullptr;
+										}
+
+										// WAO: Check for hits in appropriate Sampler on PQ miss
+										if(sampler_ptr != nullptr)
+										{
+											int8_t free_dist_sampler = sampler_ptr->check_hit(current_vpn);
+
+											// Hit in sampler
+											if(free_dist_sampler != 0)
+											{
+												fdt_ptr->update_fdt(free_dist_sampler);
+											}
+										}
+										#endif
+
 										// WAO: Bring in free prefetches from demand PTW
 										#ifdef SBFP_ENABLE
+										// WAO: Additional condition (for testing)
+										#ifndef AGILE_SEP_SAMPLER
 										// WAO: Compute base address (cache line aligned)
 										uint64_t offset = current_vpn % 8;  // Each entry is 8B and cache line is 64B
 										uint64_t vpn_base = current_vpn - offset;
@@ -1044,6 +1101,36 @@ void CACHE::handle_fill()
 											}
 										}
 										#endif
+										#endif
+
+										#ifdef AGILE_SEP_SAMPLER
+										if(sampler_ptr != nullptr)
+										{
+											// WAO: Compute base address (cache line aligned)
+											uint64_t offset = current_vpn % 8;  // Each entry is 8B and cache line is 64B
+											uint64_t vpn_base = current_vpn - offset;
+
+											// WAO: Add free VPN translations to Sampler if FDT is not saturated
+											for(int i = 0; i < 8; i++)
+											{
+												if(i != offset)
+												{
+													uint64_t vpn_free = vpn_base + i;
+													int8_t free_distance = i - (int) offset;
+
+													// Check if FDT is beyond threshold
+													if(fdt_ptr->insert_sampler(free_distance))
+													{
+														sampler_ptr->add_entry(vpn_free, free_distance);
+													}
+													else
+													{
+														prefetch_page(RQ.entry[index].ip, RQ.entry[index].full_addr, vpn_free, FILL_L2, 0, 1, 0, free_distance, RQ.entry[index].instr_id, RQ.entry[index].type, iflag, 0, 0, 0);
+													}
+												}
+											}
+										}
+										#endif
 									}
 									else{
 										if(PQ.entry[answer.first].free_bit == 1 && PQ.entry[answer.first].free_distance != 0){
@@ -1058,6 +1145,39 @@ void CACHE::handle_fill()
 										if(PQ.entry[answer.first].free_distance != 0)
 										{
 											STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+										}
+										#endif
+
+										#ifdef AGILE_SEP_SAMPLER
+										// WAO: Determine appropriate sampler and FDT
+										fdt* fdt_ptr;
+										sampler* sampler_ptr;
+
+										if(stp_enable)
+										{
+											fdt_ptr = &stp_fdt;
+											sampler_ptr = &stp_sampler;
+										}
+										else if(h2p_enable)
+										{
+											fdt_ptr = &h2p_fdt;
+											sampler_ptr = &h2p_sampler;
+										}
+										else if(masp_enable)
+										{
+											fdt_ptr = &masp_fdt;
+											sampler_ptr = &masp_sampler;
+										}
+										else
+										{
+											fdt_ptr = nullptr;
+											sampler_ptr = nullptr;
+										}
+
+										// WAO: Update FDT for PQ hit
+										if(PQ.entry[answer.first].free_distance != 0)
+										{
+											fdt_ptr->update_fdt(PQ.entry[answer.first].free_distance);
 										}
 										#endif
 

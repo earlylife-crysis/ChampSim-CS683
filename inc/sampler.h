@@ -4,12 +4,9 @@
 #ifndef SAMPLER_H
 #define SAMPLER_H
 
-// Controls whether or nor SBFP is used
-#define SBFP_ENABLE
-
 #include <cstdint>
 
-#define SAMPLER_SIZE 64
+#define SAMPLER_SIZE 16
 
 class sampler
 {
