@@ -1036,7 +1036,7 @@ void CACHE::handle_fill()
 										#endif
 
 										#ifdef AGILE_SEP_SAMPLER
-										// WAO: Determine appropraite sampler and FDT
+										// WAO: Determine appropriate sampler and FDT
 										fdt* fdt_ptr;
 										sampler* sampler_ptr;
 										if(stp_enable)
@@ -1061,7 +1061,7 @@ void CACHE::handle_fill()
 										}
 
 										// WAO: Check for hits in appropriate Sampler on PQ miss
-										if(sampler_ptr != nullptr)
+										if(fdt_ptr != nullptr)
 										{
 											int8_t free_dist_sampler = sampler_ptr->check_hit(current_vpn);
 
@@ -1175,9 +1175,12 @@ void CACHE::handle_fill()
 										}
 
 										// WAO: Update FDT for PQ hit
-										if(PQ.entry[answer.first].free_distance != 0)
+										if(fdt_ptr != nullptr)
 										{
-											fdt_ptr->update_fdt(PQ.entry[answer.first].free_distance);
+											if(PQ.entry[answer.first].free_distance != 0)
+											{
+												fdt_ptr->update_fdt(PQ.entry[answer.first].free_distance);
+											}
 										}
 										#endif
 

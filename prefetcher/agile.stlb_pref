@@ -51,18 +51,20 @@ void sbfp_operate_sep(uint32_t, uint64_t, bool, fpq*, uint64_t, uint64_t, uint8_
 int64_t h2p_history[2] = {0, 0};  // Entry with index 0 is the more recent entry
 uint64_t prev_addr = 0;
 
-// Boolean variables to indicate whether prefetcher is enabled
-bool stp_enable = false;
-bool h2p_enable = false;
-bool masp_enable = false;
+#ifdef AGILE_SEP_SAMPLER
+// WAO: Added individual STLB samplers and FDTs as extern variables
+extern sampler stp_sampler;
+extern fdt stp_fdt;
+extern sampler h2p_sampler;
+extern fdt h2p_fdt;
+extern sampler masp_sampler;
+extern fdt masp_fdt;
 
-// Seperate sampler and FDT for each prefetcher
-sampler stp_sampler = sampler();
-fdt stp_fdt = fdt();
-sampler h2p_sampler = sampler();
-fdt h2p_fdt = fdt();
-sampler masp_sampler = sampler();
-fdt masp_fdt = fdt();
+// WAO: Boolean variables to indicate whether prefetcher is enabled
+extern bool stp_enable;
+extern bool h2p_enable;
+extern bool masp_enable;
+#endif
 
 // Structures for MASP
 #define MASP_TRACKER_SIZE 64

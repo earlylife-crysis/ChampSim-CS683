@@ -33,6 +33,19 @@ uint64_t previous_ppage, num_adjacent_page, num_cl[NUM_CPUS], allocated_pages, n
 sampler STLB_sampler = sampler();
 fdt STLB_FDT = fdt();
 
+// Boolean variables to indicate whether prefetcher is enabled
+bool stp_enable = false;
+bool h2p_enable = false;
+bool masp_enable = false;
+
+// Seperate sampler and FDT for each prefetcher
+sampler stp_sampler = sampler();
+fdt stp_fdt = fdt();
+sampler h2p_sampler = sampler();
+fdt h2p_fdt = fdt();
+sampler masp_sampler = sampler();
+fdt masp_fdt = fdt();
+
 void record_roi_stats(uint32_t cpu, CACHE *cache)
 {
 	for (uint32_t i=0; i<NUM_TYPES; i++) {
