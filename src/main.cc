@@ -33,18 +33,33 @@ uint64_t previous_ppage, num_adjacent_page, num_cl[NUM_CPUS], allocated_pages, n
 sampler STLB_sampler = sampler();
 fdt STLB_FDT = fdt();
 
-// Boolean variables to indicate whether prefetcher is enabled
+// WAO: Boolean variables to indicate whether prefetcher is enabled
 bool stp_enable = false;
 bool h2p_enable = false;
 bool masp_enable = false;
+bool morrigan_enable = false;
 
-// Seperate sampler and FDT for each prefetcher
+// WAO: Seperate sampler and FDT for each prefetcher
 sampler stp_sampler = sampler();
 fdt stp_fdt = fdt();
 sampler h2p_sampler = sampler();
 fdt h2p_fdt = fdt();
 sampler masp_sampler = sampler();
 fdt masp_fdt = fdt();
+sampler morrigan_sampler = sampler();
+fdt morrigan_fdt = fdt();
+
+// WAO: Counters to determine chosen prefetcher
+uint64_t pref_enable = 0;  // 8-bit counter
+uint64_t select_1 = 0;  // 6-bit counter
+uint64_t select_2 = 0;  // 2-bit counter
+uint64_t pref_enable_morrigan = 0;
+
+// WAO: Created vectors to hold prefetcher counter values
+vector<uint64_t> pref_enable_vec;
+vector<uint64_t> select_1_vec;
+vector<uint64_t> select_2_vec;
+vector<uint64_t> pref_enable_morrigan_vec;
 
 void record_roi_stats(uint32_t cpu, CACHE *cache)
 {
@@ -1746,6 +1761,14 @@ int main(int argc, char** argv)
 
 				ooo_cpu[i].last_sim_instr = ooo_cpu[i].num_retired;
 				ooo_cpu[i].last_sim_cycle = current_core_cycle[i];
+
+				#ifdef PRINT_PREFETCHER_COUNTERS
+				// WAO: Append prefetcher counter values to vectors
+				pref_enable_vec.push_back(pref_enable);
+				select_1_vec.push_back(select_1);
+				select_2_vec.push_back(select_2);
+				pref_enable_morrigan_vec.push_back(pref_enable_morrigan);
+				#endif
 			}
 
 			// check for deadlock
@@ -1866,6 +1889,43 @@ int main(int argc, char** argv)
 	STLB_sampler.print_contents();
 	cout << "\nSTLB FDT Contents\n";
 	STLB_FDT.print_fdt();
+	#endif
+
+	#ifdef AGILE_SEP_SAMPLER
+	// WAO: Print contents of the various Samplers and FDTSs
+	cout << "\nSTP Sampler Contents\n";
+	stp_sampler.print_contents();
+	cout << "\nSTP FDT Contents\n";
+	stp_fdt.print_fdt();
+	cout << "\nH2P Sampler Contents\n";
+	h2p_sampler.print_contents();
+	cout << "\nH2P FDT Contents\n";
+	h2p_fdt.print_fdt();
+	cout << "\nMASP Sampler Contents\n";
+	masp_sampler.print_contents();
+	cout << "\nMASP FDT Contents\n";
+	masp_fdt.print_fdt();
+	cout << "\nDefault Sampler Contents\n";
+	STLB_sampler.print_contents();
+	cout << "\nDefault FDT Contents\n";
+	STLB_FDT.print_fdt();
+	#endif
+
+	#ifdef PRINT_PREFETCHER_COUNTERS
+	// WAO: Print Agile prefetcher counters
+	cout << "\n\npref_enable: ";
+	for (int i = 0; i < pref_enable_vec.size(); i++)
+		cout << pref_enable_vec[i] << ",";
+	cout << "\nselect_1: ";
+	for (int i = 0; i < select_1_vec.size(); i++)
+		cout << select_1_vec[i] << ",";
+	cout << "\nselect_2: ";
+	for (int i = 0; i < select_2_vec.size(); i++)
+		cout << select_2_vec[i] << ",";
+	cout << "\npref_enable_morrigan: ";
+	for (int i = 0; i < pref_enable_morrigan_vec.size(); i++)
+		cout << pref_enable_morrigan_vec[i] << ",";
+	cout << "\n";
 	#endif
 
 	return 0;

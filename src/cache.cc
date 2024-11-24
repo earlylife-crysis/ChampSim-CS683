@@ -11,13 +11,10 @@
 #define DEBUG_STLB 0
 #define DEBUG 0
 
-#ifdef SBFP_ENABLE
 // WAO: Added STLB sampler and FDT as extern variables
 extern sampler STLB_sampler;
 extern fdt STLB_FDT;
-#endif 
 
-#ifdef AGILE_SEP_SAMPLER
 // WAO: Added individual STLB samplers and FDTs as extern variables
 extern sampler stp_sampler;
 extern fdt stp_fdt;
@@ -25,12 +22,18 @@ extern sampler h2p_sampler;
 extern fdt h2p_fdt;
 extern sampler masp_sampler;
 extern fdt masp_fdt;
+extern sampler morrigan_sampler;
+extern fdt morrigan_fdt;
+
+// WAO: Added a sampler and FDT for use in case where no prefetcher is enabled
+extern sampler STLB_sampler;
+extern fdt STLB_FDT;
 
 // WAO: Boolean variables to indicate whether prefetcher is enabled
 extern bool stp_enable;
 extern bool h2p_enable;
 extern bool masp_enable;
-#endif
+extern bool morrigan_enable;
 
 void CACHE::print_fctb(){
 	for(int i=0; i<FCTB_SIZE; i++)
@@ -1025,13 +1028,16 @@ void CACHE::handle_fill()
 											pf_misses_pq++;
 											
 										#ifdef SBFP_ENABLE
-										// WAO: Check for hits in Sampler on PQ miss
-										int8_t free_dist_sampler = STLB_sampler.check_hit(current_vpn);
-
-										// Hit in sampler
-										if(free_dist_sampler != 0)
+										if(!morrigan_enable || iflag == 0)
 										{
-											STLB_FDT.update_fdt(free_dist_sampler);
+											// WAO: Check for hits in Sampler on PQ miss
+											int8_t free_dist_sampler = STLB_sampler.check_hit(current_vpn);
+
+											// Hit in sampler
+											if(free_dist_sampler != 0)
+											{
+												STLB_FDT.update_fdt(free_dist_sampler);
+											}
 										}
 										#endif
 
@@ -1071,6 +1077,17 @@ void CACHE::handle_fill()
 												fdt_ptr->update_fdt(free_dist_sampler);
 											}
 										}
+										else
+										{
+											// WAO: Update no pref FDT if no prefetcher is enabled
+											int8_t free_dist_sampler = STLB_sampler.check_hit(current_vpn);
+
+											// Hit in sampler
+											if(free_dist_sampler != 0)
+											{
+												STLB_FDT.update_fdt(free_dist_sampler);
+											}
+										}
 										#endif
 
 										// WAO: Bring in free prefetches from demand PTW
@@ -1089,10 +1106,17 @@ void CACHE::handle_fill()
 												uint64_t vpn_free = vpn_base + i;
 												int8_t free_distance = i - (int) offset;
 
-												// Check if FDT is beyond threshold
-												if(STLB_FDT.insert_sampler(free_distance))
+												if(!morrigan_enable || iflag == 0)
 												{
-													STLB_sampler.add_entry(vpn_free, free_distance);
+													// Check if FDT is beyond threshold
+													if(STLB_FDT.insert_sampler(free_distance))
+													{
+														STLB_sampler.add_entry(vpn_free, free_distance);
+													}
+													else
+													{
+														prefetch_page(RQ.entry[index].ip, RQ.entry[index].full_addr, vpn_free, FILL_L2, 0, 1, 0, free_distance, RQ.entry[index].instr_id, RQ.entry[index].type, iflag, 0, 0, 0);
+													}
 												}
 												else
 												{
@@ -1130,6 +1154,33 @@ void CACHE::handle_fill()
 												}
 											}
 										}
+										else
+										{
+											// WAO: Add entries to common sampler if no prefetcher is enabled
+											// WAO: Compute base address (cache line aligned)
+											uint64_t offset = current_vpn % 8;  // Each entry is 8B and cache line is 64B
+											uint64_t vpn_base = current_vpn - offset;
+
+											// WAO: Add free VPN translations to Sampler if FDT is not saturated
+											for(int i = 0; i < 8; i++)
+											{
+												if(i != offset)
+												{
+													uint64_t vpn_free = vpn_base + i;
+													int8_t free_distance = i - (int) offset;
+
+													// Check if FDT is beyond threshold
+													if(STLB_FDT.insert_sampler(free_distance))
+													{
+														STLB_sampler.add_entry(vpn_free, free_distance);
+													}
+													else
+													{
+														prefetch_page(RQ.entry[index].ip, RQ.entry[index].full_addr, vpn_free, FILL_L2, 0, 1, 0, free_distance, RQ.entry[index].instr_id, RQ.entry[index].type, iflag, 0, 0, 0);
+													}
+												}
+											}	
+										}
 										#endif
 									}
 									else{
@@ -1142,9 +1193,12 @@ void CACHE::handle_fill()
 
 										#ifdef SBFP_ENABLE
 										// WAO: Update FDT for PQ hit
-										if(PQ.entry[answer.first].free_distance != 0)
+										if(!morrigan_enable || iflag == 0)
 										{
-											STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+											if(PQ.entry[answer.first].free_distance != 0)
+											{
+												STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
+											}
 										}
 										#endif
 
@@ -1180,6 +1234,14 @@ void CACHE::handle_fill()
 											if(PQ.entry[answer.first].free_distance != 0)
 											{
 												fdt_ptr->update_fdt(PQ.entry[answer.first].free_distance);
+											}
+										}
+										else
+										{
+											// WAO: Update common FDT if no prefetcher is enabled
+											if(PQ.entry[answer.first].free_distance != 0)
+											{
+												STLB_FDT.update_fdt(PQ.entry[answer.first].free_distance);
 											}
 										}
 										#endif

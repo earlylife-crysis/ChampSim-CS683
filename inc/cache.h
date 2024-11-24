@@ -11,10 +11,16 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define P2TLB 0
 
 // WAO: Controls whether or nor SBFP is used
-//#define SBFP_ENABLE
+#define SBFP_ENABLE
 
 // WAO: Controls whether separate sampler is used for each prefetcher in Agile prefetcher
-#define AGILE_SEP_SAMPLER
+//#define AGILE_SEP_SAMPLER
+
+// WAO: Defines whether or not the Agile prefetcher is enabled
+#define AGILE_PREFETCHER_ENABLE
+
+// WAO: Defines whether to print out debug info regarding Agile prefetcher counters
+#define PRINT_PREFETCHER_COUNTERS
 
 // Free Prefetching
 
