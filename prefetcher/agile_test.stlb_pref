@@ -34,14 +34,14 @@ extern uint64_t pref_enable_morrigan;
 // Defines for saturation limits of above counters
 #define PREF_ENABLE_MAX 255
 #define SELECT_1_MAX 63
-#define SELECT_2_MAX 3  // Setting max values to a high number to see the patterns in the counters
-#define PREF_ENABLE_MORRIGAN_MAX 65535
+#define SELECT_2_MAX 3
+#define PREF_ENABLE_MORRIGAN_MAX 511
 
 // Defines for enable thresholds of above counters
 #define PREF_ENABLE_THRESH 128
 #define SELECT_1_THRESH 32
 #define SELECT_2_THRESH 2
-#define PREF_ENABLE_MORRIGAN_THRESH 65535
+#define PREF_ENABLE_MORRIGAN_THRESH 256
 
 // Function prototypes for various prefetchers (first argument corresponds to cpu ID)
 void stp_operate(uint32_t, uint64_t, uint64_t, uint8_t, uint8_t, int, int, int*, uint64_t, int);
@@ -442,6 +442,13 @@ void morrigan_operate(uint32_t cpu, uint64_t addr, uint64_t ip, uint8_t cache_hi
 		return;
 	}
 
+	morrigan_enable = false;
+
+	// Check if Morrigan should be operated
+	if(pref_enable_morrigan >= PREF_ENABLE_MORRIGAN_THRESH)
+	{
+		morrigan_enable = true;
+	}
 	s_timer++; 
 
 	uint64_t current_vpn = addr, partial_vpn = current_vpn & TAG_MASK, clp=0;
