@@ -18,9 +18,9 @@ fpq h2p_fpq = fpq();
 fpq masp_fpq = fpq();
 
 // Counters to determine chosen prefetcher
-uint8_t pref_enable = 0;  // 8-bit counter
-uint8_t select_1 = 0;  // 6-bit counter
-uint8_t select_2 = 0;  // 2-bit counter
+extern uint8_t pref_enable;  // 8-bit counter
+extern uint8_t select_1;  // 6-bit counter
+extern uint8_t select_2;  // 2-bit counter
 
 // Defines for saturation limits of above counters
 #define PREF_ENABLE_MAX 255

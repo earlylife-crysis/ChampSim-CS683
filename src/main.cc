@@ -53,7 +53,7 @@ fdt morrigan_fdt = fdt();
 uint64_t pref_enable = 0;  // 8-bit counter
 uint64_t select_1 = 0;  // 6-bit counter
 uint64_t select_2 = 0;  // 2-bit counter
-uint64_t pref_enable_morrigan = 0;
+uint64_t pref_enable_morrigan = 0;  // 6-bit counter
 
 // WAO: Created vectors to hold prefetcher counter values
 vector<uint64_t> pref_enable_vec;
