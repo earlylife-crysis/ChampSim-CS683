@@ -1,0 +1,328 @@
+
+*** ChampSim Multicore Out-of-Order Simulator ***
+
+Warmup Instructions: 50000000
+Simulation Instructions: 100000000
+Number of CPUs: 1
+LLC sets: 2048
+LLC ways: 16
+Off-chip DRAM Size: 4096 MB Channels: 1 Width: 64-bit Data Rate: 3200 MT/s
+
+CPU 0 runs /home/yashas/benchmarks/cvp1/chosen/srv222.champsim.xz
+Agile STLB Prefetcher on CPU 0
+CPU 0 L1D next line prefetcher
+CPU 0 L2C IP-based stride prefetcher
+Heartbeat CPU 0 instructions: 10000000 cycles: 7699290 heartbeat IPC: 1.29882 cumulative IPC: 1.29882 (Simulation time: 0 hr 0 min 13 sec) 
+Heartbeat CPU 0 instructions: 20000000 cycles: 15386355 heartbeat IPC: 1.30089 cumulative IPC: 1.29985 (Simulation time: 0 hr 0 min 27 sec) 
+Heartbeat CPU 0 instructions: 30000001 cycles: 23071417 heartbeat IPC: 1.30123 cumulative IPC: 1.30031 (Simulation time: 0 hr 0 min 41 sec) 
+Heartbeat CPU 0 instructions: 40000001 cycles: 30772573 heartbeat IPC: 1.29851 cumulative IPC: 1.29986 (Simulation time: 0 hr 0 min 54 sec) 
+Heartbeat CPU 0 instructions: 50000001 cycles: 38461086 heartbeat IPC: 1.30064 cumulative IPC: 1.30002 (Simulation time: 0 hr 1 min 7 sec) 
+
+Warmup complete CPU 0 instructions: 50000001 cycles: 38461086 (Simulation time: 0 hr 1 min 7 sec) 
+
+Heartbeat CPU 0 instructions: 60000001 cycles: 61995177 heartbeat IPC: 0.424915 cumulative IPC: 0.424915 (Simulation time: 0 hr 1 min 24 sec) 
+Heartbeat CPU 0 instructions: 70000001 cycles: 85025595 heartbeat IPC: 0.434208 cumulative IPC: 0.429512 (Simulation time: 0 hr 1 min 41 sec) 
+Heartbeat CPU 0 instructions: 80000000 cycles: 107897937 heartbeat IPC: 0.437209 cumulative IPC: 0.432047 (Simulation time: 0 hr 1 min 59 sec) 
+Heartbeat CPU 0 instructions: 90000001 cycles: 131474426 heartbeat IPC: 0.424151 cumulative IPC: 0.430046 (Simulation time: 0 hr 2 min 16 sec) 
+Heartbeat CPU 0 instructions: 100000001 cycles: 154382048 heartbeat IPC: 0.436536 cumulative IPC: 0.431328 (Simulation time: 0 hr 2 min 33 sec) 
+*** Reached end of trace for Core: 0 Repeating trace: /home/yashas/benchmarks/cvp1/chosen/srv222.champsim.xz
+Heartbeat CPU 0 instructions: 110000000 cycles: 177809812 heartbeat IPC: 0.426844 cumulative IPC: 0.430574 (Simulation time: 0 hr 2 min 50 sec) 
+Heartbeat CPU 0 instructions: 120000001 cycles: 200903743 heartbeat IPC: 0.433014 cumulative IPC: 0.430921 (Simulation time: 0 hr 3 min 8 sec) 
+Heartbeat CPU 0 instructions: 130000003 cycles: 224132192 heartbeat IPC: 0.430507 cumulative IPC: 0.430869 (Simulation time: 0 hr 3 min 25 sec) 
+Heartbeat CPU 0 instructions: 140000000 cycles: 247499552 heartbeat IPC: 0.427947 cumulative IPC: 0.430543 (Simulation time: 0 hr 3 min 43 sec) 
+Heartbeat CPU 0 instructions: 150000001 cycles: 270579154 heartbeat IPC: 0.433283 cumulative IPC: 0.430815 (Simulation time: 0 hr 3 min 59 sec) 
+Finished CPU 0 instructions: 100000000 cycles: 232118068 cumulative IPC: 0.430815 (Simulation time: 0 hr 3 min 59 sec) 
+
+ChampSim completed all CPUs
+
+Region of Interest Statistics
+
+CPU 0 cumulative IPC: 0.430815 instructions: 100000000 cycles: 232118068
+L1D TOTAL     ACCESS:   46318478  HIT:   43851274  MISS:    2467204
+L1D LOAD      ACCESS:   18323613  HIT:   17213031  MISS:    1110582
+L1D RFO       ACCESS:   10149733  HIT:    9957175  MISS:     192558
+L1D PREFETCH  ACCESS:   17845132  HIT:   16681068  MISS:    1164064
+L1D WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+L1D PREFETCH  REQUESTED:   28880442  ISSUED:   28504059  USEFUL:     546228  USELESS:    1196548
+L1D AVERAGE MISS LATENCY: 40.5457 cycles
+L1I TOTAL     ACCESS:   50413457  HIT:   47746552  MISS:    2666905
+L1I LOAD      ACCESS:   50413457  HIT:   47746552  MISS:    2666905
+L1I RFO       ACCESS:          0  HIT:          0  MISS:          0
+L1I PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+L1I WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+L1I PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+L1I AVERAGE MISS LATENCY: 33.3584 cycles
+L2C TOTAL     ACCESS:    5790499  HIT:    2308109  MISS:    3482390
+L2C LOAD      ACCESS:    3721843  HIT:    1199037  MISS:    2522806
+L2C RFO       ACCESS:     190303  HIT:      63406  MISS:     126897
+L2C PREFETCH  ACCESS:    1293075  HIT:     468071  MISS:     825004
+L2C WRITEBACK ACCESS:     585278  HIT:     577595  MISS:       7683
+L2C PREFETCH  REQUESTED:     183809  ISSUED:     183809  USEFUL:      69414  USELESS:    1148256
+L2C AVERAGE MISS LATENCY: 38.7029 cycles
+ITLB TOTAL     ACCESS:   43797393  HIT:   43402914  MISS:     394479
+ITLB LOAD      ACCESS:   43797393  HIT:   43402914  MISS:     394479
+ITLB RFO       ACCESS:          0  HIT:          0  MISS:          0
+ITLB PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+ITLB WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+ITLB PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+ITLB AVERAGE MISS LATENCY: 20.4303 cycles
+DTLB TOTAL     ACCESS:   27588815  HIT:   26291559  MISS:    1297256
+DTLB LOAD      ACCESS:   18908154  HIT:   17691583  MISS:    1216571
+DTLB RFO       ACCESS:    8680661  HIT:    8599976  MISS:      80685
+DTLB PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+DTLB WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+DTLB PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:          0  USELESS:          0
+DTLB AVERAGE MISS LATENCY: 20.9927 cycles
+STLB TOTAL     ACCESS:    1691735  HIT:    1458740  MISS:     232995
+STLB LOAD      ACCESS:    1611050  HIT:    1387270  MISS:     223780
+STLB RFO       ACCESS:      80685  HIT:      71470  MISS:       9215
+STLB PREFETCH  ACCESS:          0  HIT:          0  MISS:          0
+STLB WRITEBACK ACCESS:          0  HIT:          0  MISS:          0
+STLB PREFETCH  REQUESTED:    1636117  ISSUED:     571281  USEFUL:          0  USELESS:          0
+STLB AVERAGE MISS LATENCY: 76.1569 cycles
+LLC TOTAL     ACCESS:    3889635  HIT:    3689775  MISS:     199860
+LLC LOAD      ACCESS:    2520190  HIT:    2453628  MISS:      66562
+LLC RFO       ACCESS:     126853  HIT:     108502  MISS:      18351
+LLC PREFETCH  ACCESS:     828697  HIT:     713750  MISS:     114947
+LLC WRITEBACK ACCESS:     413895  HIT:     413895  MISS:          0
+LLC PREFETCH  REQUESTED:          0  ISSUED:          0  USEFUL:      19482  USELESS:     136832
+LLC AVERAGE MISS LATENCY: 137.9 cycles
+Major fault: 0 Minor fault: 6060
+CPU 0 L1D next line prefetcher final stats
+CPU 0 L2C PC-based stride prefetcher final stats
+
+*******************************************
+CPU 0 STLB -- L2-TLB Prefetcher final stats
+*******************************************
+
+-------------------------------------------
+D-STLB MISSES: 143792
+I-STLB MISSES: 89203
+-------------------------------------------
+
+-------------------------------------------
+PQ hits: 89464
+PQ misses: 143531
+-------------------------------------------
+Counter Values
+0 0 3
+
+STP FPQ Contents
+1 4 68719162339
+1 2 68719162340
+1 13 8127575
+1 14 8127572
+1 7 68719162336
+1 9 8127578
+1 10 8127577
+1 0 68719162343
+1 12 8127574
+1 11 8127576
+1 5 68719162337
+1 15 8127573
+1 1 68719162342
+1 8 8127579
+1 6 68719162338
+1 3 68719162341
+
+MASP FPQ Contents
+1 9 6083447
+1 4 6083486
+1 0 68719085231
+1 10 6083478
+1 5 6083485
+1 1 68719085229
+1 15 6083429
+1 13 6083474
+1 2 68719085230
+1 8 6083446
+1 7 6083484
+1 11 6083477
+1 12 6083476
+1 14 6083475
+1 6 6083483
+1 3 6083487
+
+H2P FPQ Contents
+1 2 137430197107
+1 8 18446744005004598810
+1 4 137430197105
+1 0 68721207902
+1 9 18446744005004598808
+1 15 10173138
+1 7 18446744005004598811
+1 3 137430197106
+1 1 68721207903
+1 14 10173137
+1 12 10173140
+1 11 10173141
+1 6 18446744005004598812
+1 5 137430197104
+1 10 18446744005004598809
+1 13 10173139
+
+Morrigan FPQ Contents
+1 13 68719162571
+1 10 68719162574
+1 11 68719162573
+1 12 68719162572
+1 9 68719162575
+1 0 68719162336
+1 4 68719162341
+1 3 68719162340
+1 15 68719162569
+1 6 68719162343
+1 7 68719162568
+1 5 68719162342
+1 8 68719162339
+1 14 68719162570
+1 1 68719162337
+1 2 68719162338
+
+MASP Tracker Contents
+
+Contents of Set 0
+4214292173 4294652158 0 1 1
+4214495147 4294652951 0 1 0
+4214296832 4294652177 0 1 3
+4214259298 8126491 0 1 2
+
+Contents of Set 1
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 2
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 3
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 4
+4214355784 8127075 0 1 2
+4214538559 6091743 0 1 3
+4214259298 4294597867 0 1 1
+4214495151 6082010 0 1 0
+
+Contents of Set 5
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 6
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 7
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 8
+4214495154 8127574 0 1 0
+4214294336 6083218 0 1 1
+4214366089 6083479 -4 1 3
+4214294334 6083111 0 1 2
+
+Contents of Set 9
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 10
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 11
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 12
+4214259319 4294575791 -1 1 2
+4214355755 6083589 0 1 3
+4214481675 4294652899 0 1 0
+4214683585 4294653687 0 1 1
+
+Contents of Set 13
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 14
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+Contents of Set 15
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+0 0 0 0 0
+
+H2P History Structure Contents
+4286525325 2045564 4294652899
+
+DRAM Statistics
+ CHANNEL 0
+ RQ ROW_BUFFER_HIT:      41366  ROW_BUFFER_MISS:     158494
+ DBUS_CONGESTED:      47760
+ WQ ROW_BUFFER_HIT:      11165  ROW_BUFFER_MISS:      89366  FULL:          0
+
+ AVG_CONGESTED_CYCLE: 5
+
+CPU 0 Branch Prediction Accuracy: 99.4951% MPKI: 0.93747 Average ROB Occupancy at Mispredict: 14.2775
+
+Branch types
+NOT_BRANCH: 81430920 81.4309%
+BRANCH_DIRECT_JUMP: 906068 0.906068%
+BRANCH_INDIRECT: 289287 0.289287%
+BRANCH_CONDITIONAL: 13986922 13.9869%
+BRANCH_DIRECT_CALL: 1322303 1.3223%
+BRANCH_INDIRECT_CALL: 336587 0.336587%
+BRANCH_RETURN: 1727915 1.72792%
+BRANCH_OTHER: 0 0%
+
+
+STLB Sampler Contents
+8127571 -3 1
+8127572 -2 0
+6082008 -2 7
+68719107311 4 8
+68719107304 -3 10
+68719085228 -3 15
+8126489 -2 12
+8127568 -6 4
+6082015 5 5
+8126488 -3 13
+8127569 -5 3
+68719107305 -2 9
+8126495 4 11
+68719085229 -2 14
+8127570 -4 2
+6082014 4 6
+
+STLB FDT Contents
+2 11 10 7 23 32 229 529 245 175 36 7 12 4 
+
+pref_enable: 0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+select_1: 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+select_2: 3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+pref_enable_morrigan: 0,83,283,1022,1015,1019,1023,1023,1023,1017,1023,1023,1017,1021,1023,
